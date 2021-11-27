@@ -1,46 +1,86 @@
 #![allow(dead_code)]
-mod tests;
+use std::collections::HashMap;
 
 #[derive(Debug)]
+pub struct Portfolio {
+    stocks: HashMap<String, TradeHistory>,
+}
+
+impl Portfolio {
+    pub fn new() -> Self {
+        Portfolio {
+            stocks: HashMap::new(),
+        }
+    }
+
+    pub fn buy(&mut self, stock: &String, quantity: u32, value: f64) {
+        let trade_history = self
+            .stocks
+            .entry(stock.clone())
+            .or_insert(TradeHistory::new());
+        trade_history.add(Trade::new(TradeType::BUY, quantity, value));
+    }
+
+    pub fn sell(
+        &mut self,
+        stock: &String,
+        quantity: u32,
+        value: f64,
+    ) -> Result<(), NotEnoughStockToSell> {
+        if let Some(trade_history) = self.stocks.get_mut(stock) {
+            match trade_history.quantity().cmp(&(quantity as i32)) {
+                std::cmp::Ordering::Less => return Err(NotEnoughStockToSell),
+                std::cmp::Ordering::Equal => trade_history.clear(),
+                std::cmp::Ordering::Greater => {
+                    trade_history.add(Trade::new(TradeType::SELL, quantity, value))
+                }
+            }
+
+            return Ok(());
+        }
+
+        return Err(NotEnoughStockToSell);
+    }
+
+    pub fn stock(&self, symbol: &String) -> Stock {
+        let quantity;
+
+        if let Some(trade_history) = self.stocks.get(symbol) {
+            quantity = trade_history.quantity();
+
+            if quantity < 0 {
+                panic!(
+                    "This is a bug in the Portfolio implementation, the trade history could never
+                 contain a negative quantity"
+                );
+            }
+        } else {
+            quantity = 0;
+        }
+
+        Stock {
+            symbol: symbol.clone(),
+            quantity: quantity as u32,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
 pub struct Stock {
-    symbol: String,
-    trade_history: TradeHistory,
-}
-
-impl Stock {
-    pub fn new(symbol: String) -> Self {
-        let trades: Vec<Trade> = Vec::new();
-        let trade_history = TradeHistory::new(trades);
-
-        Stock {
-            symbol,
-            trade_history,
-        }
-    }
-
-    pub fn with_trade_history(symbol: String, trade_history: TradeHistory) -> Self {
-        Stock {
-            symbol,
-            trade_history,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum TradeType {
-    SELL,
-    BUY,
+    pub symbol: String,
+    pub quantity: u32,
 }
 
 #[derive(Debug)]
-pub struct Trade {
+struct Trade {
     trade_type: TradeType,
     quantity: u32,
+    // The trade's unit value
     value: f64,
 }
 
 impl Trade {
-    pub fn new(trade_type: TradeType, quantity: u32, value: f64) -> Self {
+    fn new(trade_type: TradeType, quantity: u32, value: f64) -> Self {
         Trade {
             trade_type,
             quantity,
@@ -49,31 +89,35 @@ impl Trade {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum TradeType {
+    SELL,
+    BUY,
+}
+
 #[derive(Debug)]
-pub struct TradeHistory {
+struct TradeHistory {
     trades: Vec<Trade>,
 }
 
 impl TradeHistory {
-    pub fn new(trades: Vec<Trade>) -> Self {
+    fn new() -> Self {
+        TradeHistory { trades: Vec::new() }
+    }
+
+    fn with_trades(trades: Vec<Trade>) -> Self {
         TradeHistory { trades }
     }
 
-    pub fn add(&mut self, trade: Trade) {
+    fn clear(&mut self) {
+        self.trades.clear()
+    }
+
+    fn add(&mut self, trade: Trade) {
         self.trades.push(trade);
     }
 
-    pub fn value(&self) -> f64 {
-        self.trades
-            .iter()
-            .map(|trade| match trade.trade_type {
-                TradeType::SELL => -(trade.quantity as f64 * trade.value),
-                TradeType::BUY => (trade.quantity as f64 * trade.value),
-            })
-            .sum()
-    }
-
-    pub fn quantity(&self) -> i32 {
+    fn quantity(&self) -> i32 {
         self.trades
             .iter()
             .map(|trade| match trade.trade_type {
@@ -83,7 +127,7 @@ impl TradeHistory {
             .sum()
     }
 
-    pub fn average_price(&self) -> f64 {
+    fn average_price(&self) -> f64 {
         let value: f64 = self
             .trades
             .iter()
@@ -102,4 +146,34 @@ impl TradeHistory {
     }
 }
 
-struct Portfolio {}
+#[derive(Debug, PartialEq, Eq)]
+pub struct NotEnoughStockToSell;
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    fn setup_trade_history() -> TradeHistory {
+        let trades = vec![
+            Trade::new(TradeType::BUY, 100, 18.43),
+            Trade::new(TradeType::BUY, 75, 10.33),
+            Trade::new(TradeType::SELL, 50, 9.20),
+        ];
+
+        TradeHistory::with_trades(trades)
+    }
+
+    #[test]
+    fn test_trade_history_quantity() {
+        let trade_history = setup_trade_history();
+        assert_eq!(trade_history.quantity(), 125);
+    }
+
+    #[test]
+    fn test_trade_history_average_price() {
+        let trade_history = setup_trade_history();
+        let error_margin = f64::EPSILON;
+
+        assert!((trade_history.average_price() - 14.958571428571428).abs() < error_margin);
+    }
+}
