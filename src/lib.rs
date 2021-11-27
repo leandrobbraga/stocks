@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Portfolio {
     stocks: HashMap<String, TradeHistory>,
 }
@@ -13,36 +13,39 @@ impl Portfolio {
         }
     }
 
-    pub fn buy(&mut self, stock: &String, quantity: u32, value: f64) {
+    pub fn buy(&mut self, stock: &str, quantity: u32, value: f64) {
         let trade_history = self
             .stocks
-            .entry(stock.clone())
-            .or_insert(TradeHistory::new());
-        trade_history.add(Trade::new(TradeType::BUY, quantity, value));
+            .entry(stock.into())
+            .or_insert_with(TradeHistory::new);
+        trade_history.add(Trade::new(TradeType::Buy, quantity, value));
     }
 
     pub fn sell(
         &mut self,
-        stock: &String,
+        stock: &str,
         quantity: u32,
         value: f64,
     ) -> Result<(), NotEnoughStockToSell> {
         if let Some(trade_history) = self.stocks.get_mut(stock) {
             match trade_history.quantity().cmp(&(quantity as i32)) {
                 std::cmp::Ordering::Less => return Err(NotEnoughStockToSell),
-                std::cmp::Ordering::Equal => trade_history.clear(),
-                std::cmp::Ordering::Greater => {
-                    trade_history.add(Trade::new(TradeType::SELL, quantity, value))
+                std::cmp::Ordering::Equal => {
+                    // For now we remove the TradeHistory from the Portfolio when it reaches zero quantity
+                    self.stocks.remove(stock).unwrap();
                 }
-            }
+                std::cmp::Ordering::Greater => {
+                    trade_history.add(Trade::new(TradeType::Sell, quantity, value))
+                }
+            };
 
             return Ok(());
         }
 
-        return Err(NotEnoughStockToSell);
+        Err(NotEnoughStockToSell)
     }
 
-    pub fn stock(&self, symbol: &String) -> Stock {
+    pub fn stock(&self, symbol: &str) -> Option<Stock> {
         let quantity;
 
         if let Some(trade_history) = self.stocks.get(symbol) {
@@ -54,13 +57,13 @@ impl Portfolio {
                  contain a negative quantity"
                 );
             }
-        } else {
-            quantity = 0;
-        }
 
-        Stock {
-            symbol: symbol.clone(),
-            quantity: quantity as u32,
+            Some(Stock {
+                symbol: symbol.into(),
+                quantity: quantity as u32,
+            })
+        } else {
+            None
         }
     }
 }
@@ -91,8 +94,8 @@ impl Trade {
 
 #[derive(Debug, PartialEq)]
 enum TradeType {
-    SELL,
-    BUY,
+    Sell,
+    Buy,
 }
 
 #[derive(Debug)]
@@ -121,8 +124,8 @@ impl TradeHistory {
         self.trades
             .iter()
             .map(|trade| match trade.trade_type {
-                TradeType::SELL => -(trade.quantity as i32),
-                TradeType::BUY => (trade.quantity as i32),
+                TradeType::Sell => -(trade.quantity as i32),
+                TradeType::Buy => (trade.quantity as i32),
             })
             .sum()
     }
@@ -131,14 +134,14 @@ impl TradeHistory {
         let value: f64 = self
             .trades
             .iter()
-            .filter(|trade| trade.trade_type == TradeType::BUY)
+            .filter(|trade| trade.trade_type == TradeType::Buy)
             .map(|trade| trade.value * trade.quantity as f64)
             .sum();
 
         let quantity: u32 = self
             .trades
             .iter()
-            .filter(|trade| trade.trade_type == TradeType::BUY)
+            .filter(|trade| trade.trade_type == TradeType::Buy)
             .map(|trade| trade.quantity)
             .sum();
 
@@ -155,9 +158,9 @@ mod tests {
 
     fn setup_trade_history() -> TradeHistory {
         let trades = vec![
-            Trade::new(TradeType::BUY, 100, 18.43),
-            Trade::new(TradeType::BUY, 75, 10.33),
-            Trade::new(TradeType::SELL, 50, 9.20),
+            Trade::new(TradeType::Buy, 100, 18.43),
+            Trade::new(TradeType::Buy, 75, 10.33),
+            Trade::new(TradeType::Sell, 50, 9.20),
         ];
 
         TradeHistory::with_trades(trades)
