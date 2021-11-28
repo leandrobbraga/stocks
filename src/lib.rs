@@ -31,7 +31,8 @@ impl Portfolio {
             match trade_history.quantity().cmp(&(quantity as i32)) {
                 std::cmp::Ordering::Less => return Err(NotEnoughStockToSell),
                 std::cmp::Ordering::Equal => {
-                    // For now we remove the TradeHistory from the Portfolio when it reaches zero quantity
+                    // For now we remove the TradeHistory from the Portfolio when it reaches zero
+                    // quantity
                     self.stocks.remove(stock).unwrap();
                 }
                 std::cmp::Ordering::Greater => {
@@ -46,10 +47,8 @@ impl Portfolio {
     }
 
     pub fn stock(&self, symbol: &str) -> Option<Stock> {
-        let quantity;
-
         if let Some(trade_history) = self.stocks.get(symbol) {
-            quantity = trade_history.quantity();
+            let quantity = trade_history.quantity();
 
             if quantity < 0 {
                 panic!(
@@ -110,10 +109,6 @@ impl TradeHistory {
 
     fn with_trades(trades: Vec<Trade>) -> Self {
         TradeHistory { trades }
-    }
-
-    fn clear(&mut self) {
-        self.trades.clear()
     }
 
     fn add(&mut self, trade: Trade) {
