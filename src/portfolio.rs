@@ -1,7 +1,7 @@
 #![allow(dead_code)]
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Portfolio {
     stocks: HashMap<String, TradeHistory>,
 }
@@ -61,6 +61,51 @@ impl Portfolio {
     }
 }
 
+impl ToString for Portfolio {
+    fn to_string(&self) -> String {
+        let mut buffer = String::new();
+
+        for (stock, trade_history) in &self.stocks {
+            buffer.push_str(stock);
+            buffer.push('!');
+            buffer.push_str(&trade_history.to_string());
+            buffer.push('#');
+        }
+
+        buffer.pop();
+
+        buffer
+    }
+}
+
+impl FromStr for Portfolio {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s: Vec<&str> = s.split('#').collect();
+
+        let mut stocks: HashMap<String, TradeHistory> = HashMap::new();
+
+        for serialized_stock in s {
+            let serialized_stock: Vec<&str> = serialized_stock.split('!').collect();
+
+            if serialized_stock.len() != 2 {
+                return Err(ParseError);
+            }
+
+            let stock = String::from(serialized_stock[0]);
+            let trade_history = match TradeHistory::from_str(serialized_stock[1]) {
+                Ok(trade_history) => trade_history,
+                Err(_) => return Err(ParseError),
+            };
+
+            stocks.insert(stock, trade_history);
+        }
+
+        Ok(Portfolio { stocks })
+    }
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct Stock {
     pub symbol: String,
@@ -76,7 +121,7 @@ impl Stock {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 struct Trade {
     quantity: i32,
     // The trade's unit value in cents
@@ -89,16 +134,45 @@ impl Trade {
     }
 }
 
-#[derive(Debug, Default)]
+impl ToString for Trade {
+    fn to_string(&self) -> String {
+        format!("{}|{}", self.quantity, self.value)
+    }
+}
+
+impl FromStr for Trade {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s: Vec<&str> = s.split('|').collect();
+
+        if s.len() != 2 {
+            return Err(ParseError);
+        }
+
+        let quantity: i32 = match s[0].parse() {
+            Ok(value) => value,
+            Err(_) => return Err(ParseError),
+        };
+
+        let value: u32 = match s[1].parse() {
+            Ok(value) => value,
+            Err(_) => return Err(ParseError),
+        };
+
+        Ok(Trade { quantity, value })
+    }
+}
+
+#[derive(Debug)]
+pub struct ParseError;
+
+#[derive(Debug, Default, PartialEq, Eq)]
 struct TradeHistory {
     trades: Vec<Trade>,
 }
 
 impl TradeHistory {
-    fn with_trades(trades: Vec<Trade>) -> Self {
-        TradeHistory { trades }
-    }
-
     fn add(&mut self, trade: Trade) {
         self.trades.push(trade);
     }
@@ -126,6 +200,42 @@ impl TradeHistory {
     }
 }
 
+impl ToString for TradeHistory {
+    fn to_string(&self) -> String {
+        let mut buffer = String::new();
+
+        for trade in &self.trades {
+            buffer.push_str(&trade.to_string());
+            buffer.push(';');
+        }
+
+        buffer.pop();
+
+        buffer
+    }
+}
+
+impl FromStr for TradeHistory {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s: Vec<&str> = s.split(';').collect();
+
+        let mut trades: Vec<Trade> = Vec::new();
+
+        for serialized_trade in s {
+            let trade = match Trade::from_str(serialized_trade) {
+                Ok(trade) => trade,
+                Err(_) => return Err(ParseError),
+            };
+
+            trades.push(trade)
+        }
+
+        Ok(TradeHistory { trades })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct NotEnoughStockToSell;
 
@@ -140,7 +250,7 @@ mod tests {
             Trade::new(-50, 920),
         ];
 
-        TradeHistory::with_trades(trades)
+        TradeHistory { trades }
     }
 
     #[test]
@@ -155,5 +265,26 @@ mod tests {
         let error_margin = f64::EPSILON;
 
         assert!((trade_history.average_price() - 1495.857142857143).abs() < error_margin);
+    }
+    #[test]
+    fn test_trade_serialize_deserialize() {
+        let trade = Trade::new(100, 50);
+
+        let serialized = trade.to_string();
+        let deserialized_trade = Trade::from_str(&serialized).unwrap();
+
+        assert_eq!(trade, deserialized_trade)
+    }
+
+    #[test]
+    fn test_trade_history_serialize_deserialize() {
+        let trade_history = setup_trade_history();
+
+        let serialized = trade_history.to_string();
+
+        println!("{}", serialized);
+        let deserialized_trade = TradeHistory::from_str(&serialized).unwrap();
+
+        assert_eq!(trade_history, deserialized_trade)
     }
 }

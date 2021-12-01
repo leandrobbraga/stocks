@@ -1,3 +1,4 @@
+pub mod database;
 pub mod portfolio;
 
 use portfolio::{NotEnoughStockToSell, Portfolio, Stock};

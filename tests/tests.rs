@@ -1,4 +1,6 @@
 #![cfg(test)]
+use std::str::FromStr;
+
 use stocks::portfolio::*;
 
 #[test]
@@ -31,4 +33,21 @@ fn test_portfolio_buy_and_sell() {
         NotEnoughStockToSell
     );
     assert_eq!(portfolio.stock(bbas3), None);
+}
+
+#[test]
+fn test_portfolio_serialize_deserialize() {
+    let mut portfolio = Portfolio::default();
+
+    portfolio.buy("BBAS3", 100, 100);
+    portfolio.buy("BBAS3", 200, 150);
+
+    portfolio.buy("EGIE3", 100, 100);
+    portfolio.sell("EGIE3", 50, 150).unwrap();
+
+    let serialized_portfolio = portfolio.to_string();
+
+    let deserialized_portfolio = Portfolio::from_str(&serialized_portfolio).unwrap();
+
+    assert_eq!(portfolio, deserialized_portfolio)
 }
