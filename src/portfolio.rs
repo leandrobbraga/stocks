@@ -34,10 +34,10 @@ impl Portfolio {
                 }
             };
 
-            return Ok(());
+            Ok(())
+        } else {
+            Err(NotEnoughStockToSell)
         }
-
-        Err(NotEnoughStockToSell)
     }
 
     pub fn stock(&self, symbol: &str) -> Option<Stock> {
@@ -72,6 +72,8 @@ impl ToString for Portfolio {
             buffer.push('#');
         }
 
+        // We remove the last separator because we are not adding any additional `TradeHistory`
+        // objects
         buffer.pop();
 
         buffer
@@ -81,12 +83,12 @@ impl ToString for Portfolio {
 impl FromStr for Portfolio {
     type Err = ParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s: Vec<&str> = s.split('#').collect();
+    fn from_str(serialized_portfolio: &str) -> Result<Self, Self::Err> {
+        let serialized_stocks: Vec<&str> = serialized_portfolio.split('#').collect();
 
         let mut stocks: HashMap<String, TradeHistory> = HashMap::new();
 
-        for serialized_stock in s {
+        for serialized_stock in serialized_stocks {
             let serialized_stock: Vec<&str> = serialized_stock.split('!').collect();
 
             if serialized_stock.len() != 2 {
@@ -94,12 +96,10 @@ impl FromStr for Portfolio {
             }
 
             let stock = String::from(serialized_stock[0]);
-            let trade_history = match TradeHistory::from_str(serialized_stock[1]) {
-                Ok(trade_history) => trade_history,
+            match TradeHistory::from_str(serialized_stock[1]) {
+                Ok(trade_history) => stocks.insert(stock, trade_history),
                 Err(_) => return Err(ParseError),
             };
-
-            stocks.insert(stock, trade_history);
         }
 
         Ok(Portfolio { stocks })
@@ -143,19 +143,19 @@ impl ToString for Trade {
 impl FromStr for Trade {
     type Err = ParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s: Vec<&str> = s.split('|').collect();
+    fn from_str(serialized_trade: &str) -> Result<Self, Self::Err> {
+        let serialized_trade: Vec<&str> = serialized_trade.split('|').collect();
 
-        if s.len() != 2 {
+        if serialized_trade.len() != 2 {
             return Err(ParseError);
         }
 
-        let quantity: i32 = match s[0].parse() {
+        let quantity: i32 = match serialized_trade[0].parse() {
             Ok(value) => value,
             Err(_) => return Err(ParseError),
         };
 
-        let value: u32 = match s[1].parse() {
+        let value: u32 = match serialized_trade[1].parse() {
             Ok(value) => value,
             Err(_) => return Err(ParseError),
         };
@@ -218,18 +218,16 @@ impl ToString for TradeHistory {
 impl FromStr for TradeHistory {
     type Err = ParseError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s: Vec<&str> = s.split(';').collect();
+    fn from_str(serialized_trade_history: &str) -> Result<Self, Self::Err> {
+        let serialized_trade_history: Vec<&str> = serialized_trade_history.split(';').collect();
 
         let mut trades: Vec<Trade> = Vec::new();
 
-        for serialized_trade in s {
-            let trade = match Trade::from_str(serialized_trade) {
-                Ok(trade) => trade,
+        for serialized_trade in serialized_trade_history {
+            match Trade::from_str(serialized_trade) {
+                Ok(trade) => trades.push(trade),
                 Err(_) => return Err(ParseError),
             };
-
-            trades.push(trade)
         }
 
         Ok(TradeHistory { trades })
@@ -265,26 +263,5 @@ mod tests {
         let error_margin = f64::EPSILON;
 
         assert!((trade_history.average_price() - 1495.857142857143).abs() < error_margin);
-    }
-    #[test]
-    fn test_trade_serialize_deserialize() {
-        let trade = Trade::new(100, 50);
-
-        let serialized = trade.to_string();
-        let deserialized_trade = Trade::from_str(&serialized).unwrap();
-
-        assert_eq!(trade, deserialized_trade)
-    }
-
-    #[test]
-    fn test_trade_history_serialize_deserialize() {
-        let trade_history = setup_trade_history();
-
-        let serialized = trade_history.to_string();
-
-        println!("{}", serialized);
-        let deserialized_trade = TradeHistory::from_str(&serialized).unwrap();
-
-        assert_eq!(trade_history, deserialized_trade)
     }
 }
