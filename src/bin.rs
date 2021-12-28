@@ -1,69 +1,43 @@
-use std::{process::exit, str::FromStr};
+use std::fmt::Display;
+
+use structopt::{clap::arg_enum, StructOpt};
 
 fn main() {
-    let command = match parse_arguments() {
-        Ok(command) => command,
-        Err(err) => {
-            println!("Error: {}", err.0);
-            println!();
-            println!("Usage: ./stocks COMMAND SYMBOL VALUE");
-            println!("Example: ./stocks buy bbas3 100");
-            exit(1)
-        }
-    };
-
+    let command = Arguments::from_args();
     println!("{:?}", command)
 }
 
-fn parse_arguments() -> Result<Arguments, ParseArgumentError> {
-    let command: Command = std::env::args()
-        .nth(1)
-        .ok_or_else(|| ParseArgumentError("Missing COMMAND.".into()))?
-        .parse()?;
-    let symbol: String = std::env::args()
-        .nth(2)
-        .ok_or_else(|| ParseArgumentError("Missing SYMBOL.".into()))?;
-    let value: u32 = std::env::args()
-        .nth(3)
-        .ok_or_else(|| ParseArgumentError("Missing VALUE.".into()))?
-        .parse()
-        .map_err(|_| {
-            ParseArgumentError("Please provide a valid VALUE (i.e. an integer number).".into())
-        })?;
-
-    Ok(Arguments {
-        command,
-        symbol,
-        value,
-    })
-}
-
-#[derive(Debug)]
+#[derive(Debug, StructOpt)]
+#[structopt(name = "Stocks", about = "A simple CLI to manage stocks.")]
 struct Arguments {
+    #[structopt(
+        name="COMMAND",
+        possible_values=&Command::variants(),
+        case_insensitive=true, help="The command that will be executed."
+    )]
     command: Command,
+    #[structopt(name = "SYMBOL", help = "The Stock ticker (e.g. BBAS3).")]
     symbol: String,
+    #[structopt(
+        name = "VALUE",
+        help = "How much it is going to be bought or sold (e.g. 100)."
+    )]
     value: u32,
 }
 
-#[derive(Debug)]
-enum Command {
-    Buy,
-    Sell,
-}
-
-impl FromStr for Command {
-    type Err = ParseArgumentError;
-
-    fn from_str(command: &str) -> Result<Self, Self::Err> {
-        match command.to_lowercase().as_ref() {
-            "buy" => Ok(Command::Buy),
-            "sell" => Ok(Command::Sell),
-            _ => Err(ParseArgumentError(
-                "This command was not implemented yet, try 'buy' or 'sell'.".into(),
-            )),
-        }
+arg_enum! {
+    #[derive(Debug)]
+    enum Command {
+        Buy,
+        Sell,
     }
 }
 
 #[derive(Debug)]
 struct ParseArgumentError(String);
+
+impl Display for ParseArgumentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
