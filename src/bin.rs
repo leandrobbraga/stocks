@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use structopt::{clap::arg_enum, StructOpt};
 
 fn main() {
@@ -30,14 +28,5 @@ arg_enum! {
     enum Command {
         Buy,
         Sell,
-    }
-}
-
-#[derive(Debug)]
-struct ParseArgumentError(String);
-
-impl Display for ParseArgumentError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
