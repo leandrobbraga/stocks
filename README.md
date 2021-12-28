@@ -1,2 +1,2 @@
 # stocks
-Simple stocks management system
+Simple stocks management system.
