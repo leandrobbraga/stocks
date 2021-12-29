@@ -1,8 +1,25 @@
+use stocks::Portfolio;
 use structopt::StructOpt;
 
 fn main() {
-    let command = Arguments::from_args();
-    println!("{:?}", command)
+    let args = Arguments::from_args();
+    let mut portfolio = Portfolio::new();
+
+    match args.command {
+        Command::Buy { symbol, quantity } => {
+            portfolio.buy(&symbol, quantity);
+            portfolio.summary();
+        }
+        Command::Sell { symbol, quantity } => {
+            portfolio
+                .sell(&symbol, quantity)
+                .expect("Sold more than the current quantity for that stock.");
+            portfolio.summary();
+        }
+        Command::Summary => portfolio.summary(),
+    }
+
+    std::process::exit(0)
 }
 
 #[derive(Debug, StructOpt)]
@@ -28,4 +45,6 @@ enum Command {
         #[structopt(name = "VALUE", help = "How much it is going to be sold (e.g. 100).")]
         quantity: u32,
     },
+    #[structopt(about = "Summarizes the current portfolio.")]
+    Summary,
 }
