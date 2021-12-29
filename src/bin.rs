@@ -2,24 +2,36 @@ use stocks::Portfolio;
 use structopt::StructOpt;
 
 fn main() {
-    let args = Arguments::from_args();
-    let mut portfolio = Portfolio::new();
+    let arguments = Arguments::from_args();
 
-    match args.command {
+    let mut portfolio = match Portfolio::from_file() {
+        Ok(portfolio) => portfolio,
+        Err(_) => Portfolio::new(),
+    };
+
+    match arguments.command {
         Command::Buy { symbol, quantity } => {
             portfolio.buy(&symbol, quantity);
             portfolio.summary();
+            if portfolio.save().is_err() {
+                println!("Was not possible to save the file. The last modification could be lost.")
+            };
         }
         Command::Sell { symbol, quantity } => {
-            portfolio
-                .sell(&symbol, quantity)
-                .expect("Sold more than the current quantity for that stock.");
+            if portfolio.sell(&symbol, quantity).is_err() {
+                println!(
+                    "Your portfolio didn't had enough {} to sell.",
+                    symbol.to_uppercase()
+                )
+            };
             portfolio.summary();
+
+            if portfolio.save().is_err() {
+                println!("Was not possible to save the file. The last modification could be lost.")
+            };
         }
         Command::Summary => portfolio.summary(),
     }
-
-    std::process::exit(0)
 }
 
 #[derive(Debug, StructOpt)]
