@@ -1,21 +1,33 @@
+use std::path::Path;
+
 use stocks::Portfolio;
 use structopt::StructOpt;
 
+static FILEPATH: &str = "portfolio.json";
+
 fn main() {
     let arguments = Arguments::from_args();
+    let filepath = Path::new(FILEPATH);
 
-    let mut portfolio = match Portfolio::from_file() {
+    let mut portfolio = match Portfolio::from_file(filepath) {
         Ok(portfolio) => portfolio,
         Err(_) => Portfolio::new(),
     };
 
-    match arguments.command {
+    run_command(&mut portfolio, arguments.command);
+
+    portfolio.to_file(filepath).unwrap_or_else(|_| {
+        println!(
+            "Was not possible to save the file. If there was any modification it could be lost."
+        )
+    })
+}
+
+fn run_command(portfolio: &mut Portfolio, command: Command) {
+    match command {
         Command::Buy { symbol, quantity } => {
             portfolio.buy(&symbol, quantity);
             portfolio.summary();
-            if portfolio.save().is_err() {
-                println!("Was not possible to save the file. The last modification could be lost.")
-            };
         }
         Command::Sell { symbol, quantity } => {
             if portfolio.sell(&symbol, quantity).is_err() {
@@ -25,10 +37,6 @@ fn main() {
                 )
             };
             portfolio.summary();
-
-            if portfolio.save().is_err() {
-                println!("Was not possible to save the file. The last modification could be lost.")
-            };
         }
         Command::Summary => portfolio.summary(),
     }

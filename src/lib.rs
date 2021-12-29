@@ -6,8 +6,6 @@ use std::{
     path::Path,
 };
 
-static FILEPATH: &str = "portfolio.json";
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Portfolio {
     stocks: HashMap<String, u32>,
@@ -20,13 +18,7 @@ impl Portfolio {
         }
     }
 
-    pub fn from_file() -> Result<Self, IOError> {
-        let filepath = Path::new(FILEPATH);
-
-        if !filepath.exists() {
-            return Err(IOError);
-        }
-
+    pub fn from_file(filepath: &Path) -> Result<Self, IOError> {
         let file = File::open(filepath).map_err(|_| IOError)?;
         let reader = BufReader::new(file);
 
@@ -35,9 +27,7 @@ impl Portfolio {
         Ok(portfolio)
     }
 
-    pub fn save(&self) -> Result<(), IOError> {
-        let filepath = Path::new(FILEPATH);
-
+    pub fn to_file(&self, filepath: &Path) -> Result<(), IOError> {
         let file = File::create(filepath).map_err(|_| IOError)?;
         let writer = BufWriter::new(file);
 
