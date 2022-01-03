@@ -1,3 +1,4 @@
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -6,6 +7,7 @@ use std::{
     io::{BufReader, BufWriter},
     path::Path,
 };
+use tokio::task::JoinHandle;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Portfolio {
@@ -23,9 +25,7 @@ impl Portfolio {
         let file = File::open(filepath)?;
         let reader = BufReader::new(file);
 
-        let portfolio = serde_json::from_reader(reader)?;
-
-        Ok(portfolio)
+        Ok(serde_json::from_reader(reader)?)
     }
 
     pub fn to_file(&self, filepath: &Path) -> Result<(), Box<dyn Error>> {
@@ -59,18 +59,74 @@ impl Portfolio {
         }
     }
 
-    pub fn summary(&self) {
-        println!("Portfolio Summary");
-        println!("-----------------");
+    pub fn summary(&self) -> Result<Vec<Stock>, Box<dyn Error>> {
+        let tokio = tokio::runtime::Runtime::new()?;
+        let client = reqwest::Client::new();
+        tokio.block_on(self.fetch_stock_prices(client))
+    }
+
+    async fn fetch_stock_prices(&self, client: Client) -> Result<Vec<Stock>, Box<dyn Error>> {
+        let mut tasks: Vec<JoinHandle<Result<Stock, reqwest::Error>>> = vec![];
+        let mut stocks: Vec<Stock> = vec![];
+
         for (name, quantity) in &self.stocks {
-            println!("Stock: {}, Quantity: {}", name.to_uppercase(), quantity);
+            tasks.push(tokio::spawn(Stock::from_api(
+                name.clone(),
+                client.clone(),
+                *quantity,
+            )));
         }
+
+        for task in tasks {
+            stocks.push(task.await??);
+        }
+
+        Ok(stocks)
     }
 }
 
 impl Default for Portfolio {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Stock {
+    pub symbol: String,
+    #[serde(rename = "lastPrice")]
+    pub price: f64,
+    #[serde(rename = "closingPrice")]
+    pub last_price: f64,
+    #[serde(skip)]
+    pub quantity: u32,
+}
+
+impl Stock {
+    async fn from_api(
+        symbol: String,
+        client: Client,
+        quantity: u32,
+    ) -> Result<Stock, reqwest::Error> {
+        let api = if symbol.chars().into_iter().next_back() == Some('1') {
+            "fiis"
+        } else {
+            "stocks"
+        };
+
+        let mut stock: Stock = client
+            .get(format!(
+                "https://mfinance.com.br/api/v1/{}/{}",
+                api,
+                symbol.to_lowercase()
+            ))
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        stock.quantity = quantity;
+        Ok(stock)
     }
 }
 

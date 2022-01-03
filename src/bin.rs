@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use stocks::Portfolio;
+use stocks::{Portfolio, Stock};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
@@ -9,23 +9,23 @@ fn main() {
     let command = Arguments::from_args().command;
     let filepath = Path::new(FILEPATH);
 
-    let mut stock = Stock::load_portfolio(filepath);
+    let mut stock = StockCLI::load_portfolio(filepath);
     stock.run_command(command);
     stock.save_portfolio(filepath);
 }
 
-struct Stock {
+struct StockCLI {
     portfolio: Portfolio,
 }
 
-impl Stock {
+impl StockCLI {
     fn load_portfolio(filepath: &Path) -> Self {
         let portfolio = match Portfolio::from_file(filepath) {
             Ok(portfolio) => portfolio,
             Err(_) => Portfolio::new(),
         };
 
-        Stock { portfolio }
+        StockCLI { portfolio }
     }
 
     fn save_portfolio(&self, filepath: &Path) {
@@ -40,7 +40,6 @@ impl Stock {
         match command {
             Command::Buy { symbol, quantity } => {
                 self.portfolio.buy(&symbol, quantity);
-                self.portfolio.summary();
             }
             Command::Sell { symbol, quantity } => {
                 if self.portfolio.sell(&symbol, quantity).is_err() {
@@ -49,12 +48,45 @@ impl Stock {
                         symbol.to_uppercase()
                     )
                 };
-                self.portfolio.summary();
             }
-            Command::Summary => self.portfolio.summary(),
+            Command::Summary => {
+                match self.portfolio.summary() {
+                    Ok(stocks) => StockCLI::display_summary(stocks),
+                    Err(err) => eprintln!("{:?}", err),
+                };
+            }
         }
     }
+
+    fn display_summary(summary: Vec<Stock>) {
+        let mut total_value: f64 = 0.0;
+        let mut total_change: f64 = 0.0;
+
+        println!(
+            "                               Portfolio  Summary                               "
+        );
+        println!(
+            "--------------------------------------------------------------------------------"
+        );
+        println!("Name\t\tQuantity\tPrice\t\tValue\t\t\tChange");
+
+        for stock in summary {
+            let value = stock.quantity as f64 * stock.price;
+            let change = (stock.price - stock.last_price) * stock.quantity as f64;
+
+            total_value += value;
+            total_change += change;
+
+            println!(
+                "{}\t\t{}\t\t{:.2}\t\t{:.2}\t\t{:.2}",
+                stock.symbol, stock.quantity, stock.price, value, change,
+            )
+        }
+
+        println!("Total\t\t\t\t\t\t{:.2}\t\t{:.2}", total_value, total_change)
+    }
 }
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "Stocks", about = "A simple CLI to manage stocks.")]
 struct Arguments {
