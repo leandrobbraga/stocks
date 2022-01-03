@@ -58,7 +58,7 @@ impl StockCLI {
         }
     }
 
-    fn display_summary(summary: Vec<Stock>) {
+    fn display_summary(mut summary: Vec<Stock>) {
         let mut total_value: f64 = 0.0;
         let mut total_change: f64 = 0.0;
 
@@ -70,6 +70,7 @@ impl StockCLI {
         );
         println!("Name\t\tQuantity\tPrice\t\tValue\t\t\tChange");
 
+        summary.sort_by_key(|a| a.symbol.clone());
         for stock in summary {
             let value = stock.quantity as f64 * stock.price;
             let change = (stock.price - stock.last_price) * stock.quantity as f64;
