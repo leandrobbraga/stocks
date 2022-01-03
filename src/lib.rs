@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
+    error::Error,
     fs::File,
     io::{BufReader, BufWriter},
     path::Path,
@@ -18,20 +19,20 @@ impl Portfolio {
         }
     }
 
-    pub fn from_file(filepath: &Path) -> Result<Self, IOError> {
-        let file = File::open(filepath).map_err(|_| IOError)?;
+    pub fn from_file(filepath: &Path) -> Result<Self, Box<dyn Error>> {
+        let file = File::open(filepath)?;
         let reader = BufReader::new(file);
 
-        let portfolio = serde_json::from_reader(reader).map_err(|_| IOError)?;
+        let portfolio = serde_json::from_reader(reader)?;
 
         Ok(portfolio)
     }
 
-    pub fn to_file(&self, filepath: &Path) -> Result<(), IOError> {
-        let file = File::create(filepath).map_err(|_| IOError)?;
+    pub fn to_file(&self, filepath: &Path) -> Result<(), Box<dyn Error>> {
+        let file = File::create(filepath)?;
         let writer = BufWriter::new(file);
 
-        serde_json::to_writer(writer, &self).map_err(|_| IOError)
+        Ok(serde_json::to_writer(writer, &self)?)
     }
 
     pub fn buy(&mut self, symbol: &str, quantity: u32) -> u32 {
@@ -75,6 +76,3 @@ impl Default for Portfolio {
 
 #[derive(Debug)]
 pub struct NotEnoughStockToSell;
-
-#[derive(Debug)]
-pub struct IOError;

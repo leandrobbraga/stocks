@@ -14,7 +14,6 @@ fn main() {
     stock.save_portfolio(filepath);
 }
 
-#[derive(Default)]
 struct Stock {
     portfolio: Portfolio,
 }
