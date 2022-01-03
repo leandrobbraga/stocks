@@ -98,6 +98,7 @@ impl Asset {
     }
 }
 
+#[derive(Clone)]
 pub struct AssetWPriceInfo {
     pub name: String,
     pub class: AssetClass,
@@ -118,7 +119,7 @@ impl AssetWPriceInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum AssetClass {
     FII,
     Stock,

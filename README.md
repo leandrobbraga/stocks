@@ -6,7 +6,7 @@ Simple stocks management system.
 - [x] Persistence 
 - [x] Summary
     - [X] Sort before displaying
-    - [ ] Separate FII from Stocks
+    - [X] Separate FII from Stocks
 - [X] Fetch prices from the stock market
     - [X] Deal with Stocks
     - [X] Deal with FII

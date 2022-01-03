@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use stocks::{AssetWPriceInfo, Portfolio, StockMarket};
+use stocks::{AssetClass, AssetWPriceInfo, Portfolio, StockMarket};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
@@ -56,33 +56,92 @@ impl StockCLI {
         }
     }
 
-    fn display_summary(mut summary: Vec<AssetWPriceInfo>) {
-        let mut total_value: f64 = 0.0;
-        let mut total_change: f64 = 0.0;
+    fn display_summary(summary: Vec<AssetWPriceInfo>) {
+        let mut stocks: Vec<AssetWPriceInfo> = summary
+            .iter()
+            .cloned()
+            .filter(|asset| asset.class == AssetClass::Stock)
+            .collect();
+
+        let mut fiis: Vec<AssetWPriceInfo> = summary
+            .iter()
+            .cloned()
+            .filter(|asset| asset.class == AssetClass::FII)
+            .collect();
 
         println!(
-            "                               Portfolio  Summary                               "
+            "------------------------------------------------------------------------------------"
         );
         println!(
-            "--------------------------------------------------------------------------------"
+            "                                 Portfolio  Summary                                 "
         );
+        println!(
+            "------------------------------------------------------------------------------------"
+        );
+
         println!("Name\t\tQuantity\tPrice\t\tValue\t\t\tChange");
 
-        summary.sort_by_key(|asset| asset.name.clone());
-        for stock in summary {
+        let mut stocks_total_value: f64 = 0.0;
+        let mut stocks_total_change: f64 = 0.0;
+        stocks.sort_by_key(|asset| asset.name.clone());
+        for stock in stocks {
             let value = stock.quantity as f64 * stock.price;
             let change = (stock.price - stock.last_price) * stock.quantity as f64;
 
-            total_value += value;
-            total_change += change;
+            stocks_total_value += value;
+            stocks_total_change += change;
 
             println!(
-                "{}\t\t{}\t\t{:.2}\t\t{:.2}\t\t{:.2}",
+                "{}\t\t{}\t\tR${:6.2}\tR${:10.2}\t\tR${:10.2}",
                 stock.name, stock.quantity, stock.price, value, change,
             )
         }
 
-        println!("Total\t\t\t\t\t\t{:.2}\t\t{:.2}", total_value, total_change)
+        println!(
+            "...................................................................................."
+        );
+        println!(
+            "Stocks\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}",
+            stocks_total_value, stocks_total_change
+        );
+        println!(
+            "------------------------------------------------------------------------------------"
+        );
+
+        let mut fiis_total_value: f64 = 0.0;
+        let mut fiis_total_change: f64 = 0.0;
+        fiis.sort_by_key(|asset| asset.name.clone());
+        for fii in fiis {
+            let value = fii.quantity as f64 * fii.price;
+            let change = (fii.price - fii.last_price) * fii.quantity as f64;
+
+            fiis_total_value += value;
+            fiis_total_change += change;
+
+            println!(
+                "{}\t\t{}\t\tR${:6.2}\tR${:10.2}\t\tR${:10.2}",
+                fii.name, fii.quantity, fii.price, value, change,
+            )
+        }
+
+        println!(
+            "...................................................................................."
+        );
+        println!(
+            "FIIs\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}",
+            fiis_total_value, fiis_total_change
+        );
+        println!(
+            "------------------------------------------------------------------------------------"
+        );
+        println!(
+            "Total\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}",
+            stocks_total_value + fiis_total_value,
+            stocks_total_change + fiis_total_change
+        );
+        println!(
+            "------------------------------------------------------------------------------------"
+        );
     }
 }
 
