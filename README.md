@@ -12,7 +12,7 @@ Simple stocks management system.
     - [X] Deal with FII
     - [ ] Deal with ETF
 - [X] Track portfolio performance
-- [ ] Create StockMarket namespace
+- [X] Create StockMarket namespace
 - [ ] Check before adding any asset to the portfolio
     - [ ] Add information about the Asset (FII or Stock)
 - [ ] Beautify outputs

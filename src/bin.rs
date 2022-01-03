@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use stocks::{Portfolio, Stock};
+use stocks::{AssetWPriceInfo, Portfolio, StockMarket};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
@@ -29,11 +29,7 @@ impl StockCLI {
     }
 
     fn save_portfolio(&self, filepath: &Path) {
-        self.portfolio.to_file(filepath).unwrap_or_else(|_| {
-            println!(
-            "Was not possible to save the file. If there was any modification it could be lost."
-        )
-        })
+        self.portfolio.to_file(filepath).unwrap();
     }
 
     fn run_command(&mut self, command: Command) {
@@ -46,19 +42,21 @@ impl StockCLI {
                     println!(
                         "Your portfolio didn't had enough {} to sell.",
                         symbol.to_uppercase()
-                    )
+                    );
+                    std::process::exit(1)
                 };
             }
             Command::Summary => {
-                match self.portfolio.summary() {
-                    Ok(stocks) => StockCLI::display_summary(stocks),
-                    Err(err) => eprintln!("{:?}", err),
-                };
+                let assets = self.portfolio.assets();
+                let stock_market = StockMarket::new().unwrap();
+
+                let prices = stock_market.fetch_assets_price(assets).unwrap();
+                StockCLI::display_summary(prices)
             }
         }
     }
 
-    fn display_summary(mut summary: Vec<Stock>) {
+    fn display_summary(mut summary: Vec<AssetWPriceInfo>) {
         let mut total_value: f64 = 0.0;
         let mut total_change: f64 = 0.0;
 
@@ -70,7 +68,7 @@ impl StockCLI {
         );
         println!("Name\t\tQuantity\tPrice\t\tValue\t\t\tChange");
 
-        summary.sort_by_key(|a| a.symbol.clone());
+        summary.sort_by_key(|asset| asset.name.clone());
         for stock in summary {
             let value = stock.quantity as f64 * stock.price;
             let change = (stock.price - stock.last_price) * stock.quantity as f64;
@@ -80,7 +78,7 @@ impl StockCLI {
 
             println!(
                 "{}\t\t{}\t\t{:.2}\t\t{:.2}\t\t{:.2}",
-                stock.symbol, stock.quantity, stock.price, value, change,
+                stock.name, stock.quantity, stock.price, value, change,
             )
         }
 
