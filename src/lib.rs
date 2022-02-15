@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Portfolio {
-    assets: HashMap<String, Asset>,
+    assets: HashMap<String, Asset<Unpriced>>,
 }
 
 impl Portfolio {
@@ -46,7 +46,7 @@ impl Portfolio {
 
                 self.assets.insert(
                     symbol.to_uppercase(),
-                    Asset::new(symbol.to_uppercase(), class, quantity),
+                    Asset::<Unpriced>::new(symbol.to_uppercase(), class, quantity),
                 );
             }
         }
@@ -70,7 +70,7 @@ impl Portfolio {
         }
     }
 
-    pub fn assets(&self) -> Vec<Asset> {
+    pub fn assets(&self) -> Vec<Asset<Unpriced>> {
         self.assets.values().cloned().collect()
     }
 }
@@ -82,39 +82,42 @@ impl Default for Portfolio {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Asset {
-    name: String,
-    class: AssetClass,
-    quantity: u32,
+pub struct Asset<PriceInfo> {
+    pub name: String,
+    pub class: AssetClass,
+    pub quantity: u32,
+    pub price_info: PriceInfo,
 }
 
-impl Asset {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Unpriced;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Priced {
+    #[serde(rename = "lastPrice")]
+    pub price: f64,
+    #[serde(rename = "closingPrice")]
+    pub last_price: f64,
+}
+
+impl Asset<Unpriced> {
     fn new(name: String, class: AssetClass, quantity: u32) -> Self {
         Asset {
             name,
             class,
             quantity,
+            price_info: Unpriced,
         }
     }
 }
 
-#[derive(Clone)]
-pub struct AssetWPriceInfo {
-    pub name: String,
-    pub class: AssetClass,
-    pub quantity: u32,
-    pub price: f64,
-    pub last_price: f64,
-}
-
-impl AssetWPriceInfo {
-    fn new(asset: Asset, price_info: AssetPriceInfo) -> Self {
-        AssetWPriceInfo {
-            name: asset.name,
-            class: asset.class,
-            quantity: asset.quantity,
-            price: price_info.price,
-            last_price: price_info.last_price,
+impl Asset<Priced> {
+    fn new(name: String, class: AssetClass, quantity: u32, price_info: Priced) -> Self {
+        Asset {
+            name,
+            class,
+            quantity,
+            price_info,
         }
     }
 }
@@ -123,14 +126,6 @@ impl AssetWPriceInfo {
 pub enum AssetClass {
     FII,
     Stock,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AssetPriceInfo {
-    #[serde(rename = "lastPrice")]
-    pub price: f64,
-    #[serde(rename = "closingPrice")]
-    pub last_price: f64,
 }
 
 #[derive(Debug)]
@@ -151,17 +146,17 @@ impl StockMarket {
 
     pub fn fetch_assets_price(
         &self,
-        assets: Vec<Asset>,
-    ) -> Result<Vec<AssetWPriceInfo>, Box<dyn Error>> {
+        assets: Vec<Asset<Unpriced>>,
+    ) -> Result<Vec<Asset<Priced>>, Box<dyn Error>> {
         self.runtime.block_on(self.async_fetch_assets_info(assets))
     }
 
     async fn async_fetch_assets_info(
         &self,
-        assets: Vec<Asset>,
-    ) -> Result<Vec<AssetWPriceInfo>, Box<dyn Error>> {
-        let mut tasks: Vec<JoinHandle<Result<AssetWPriceInfo, reqwest::Error>>> = vec![];
-        let mut result: Vec<AssetWPriceInfo> = vec![];
+        assets: Vec<Asset<Unpriced>>,
+    ) -> Result<Vec<Asset<Priced>>, Box<dyn Error>> {
+        let mut tasks: Vec<JoinHandle<Result<Asset<Priced>, reqwest::Error>>> = vec![];
+        let mut result: Vec<Asset<Priced>> = vec![];
 
         for asset in assets {
             tasks.push(tokio::spawn(StockMarket::async_fetch_asset_info(
@@ -178,14 +173,14 @@ impl StockMarket {
     }
 
     async fn async_fetch_asset_info(
-        asset: Asset,
+        asset: Asset<Unpriced>,
         client: reqwest::Client,
-    ) -> Result<AssetWPriceInfo, reqwest::Error> {
+    ) -> Result<Asset<Priced>, reqwest::Error> {
         let api = match asset.class {
             AssetClass::FII => "fiis",
             AssetClass::Stock => "stocks",
         };
-        let price_info: AssetPriceInfo = client
+        let price_info: Priced = client
             .get(format!(
                 "https://mfinance.com.br/api/v1/{}/{}",
                 api,
@@ -196,6 +191,11 @@ impl StockMarket {
             .json()
             .await?;
 
-        Ok(AssetWPriceInfo::new(asset, price_info))
+        Ok(Asset::<Priced>::new(
+            asset.name,
+            asset.class,
+            asset.quantity,
+            price_info,
+        ))
     }
 }
