@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Portfolio {
-    assets: HashMap<String, Asset<Unpriced>>,
+    assets: HashMap<String, UnpricedAsset>,
 }
 
 impl Portfolio {
@@ -46,7 +46,11 @@ impl Portfolio {
 
                 self.assets.insert(
                     symbol.to_uppercase(),
-                    Asset::<Unpriced>::new(symbol.to_uppercase(), class, quantity),
+                    UnpricedAsset {
+                        name: symbol.to_uppercase(),
+                        class,
+                        quantity,
+                    },
                 );
             }
         }
@@ -70,7 +74,7 @@ impl Portfolio {
         }
     }
 
-    pub fn assets(&self) -> Vec<Asset<Unpriced>> {
+    pub fn assets(&self) -> Vec<UnpricedAsset> {
         self.assets.values().cloned().collect()
     }
 }
@@ -82,44 +86,30 @@ impl Default for Portfolio {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Asset<PriceInfo> {
+pub struct UnpricedAsset {
     pub name: String,
     pub class: AssetClass,
     pub quantity: u32,
-    pub price_info: PriceInfo,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PricedAsset {
+    pub name: String,
+    pub class: AssetClass,
+    pub quantity: u32,
+    pub price: f64,
+    pub last_price: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Unpriced;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Priced {
+pub struct PriceInfo {
     #[serde(rename = "lastPrice")]
     pub price: f64,
     #[serde(rename = "closingPrice")]
     pub last_price: f64,
-}
-
-impl Asset<Unpriced> {
-    fn new(name: String, class: AssetClass, quantity: u32) -> Self {
-        Asset {
-            name,
-            class,
-            quantity,
-            price_info: Unpriced,
-        }
-    }
-}
-
-impl Asset<Priced> {
-    fn new(name: String, class: AssetClass, quantity: u32, price_info: Priced) -> Self {
-        Asset {
-            name,
-            class,
-            quantity,
-            price_info,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -146,17 +136,17 @@ impl StockMarket {
 
     pub fn fetch_assets_price(
         &self,
-        assets: Vec<Asset<Unpriced>>,
-    ) -> Result<Vec<Asset<Priced>>, Box<dyn Error>> {
+        assets: Vec<UnpricedAsset>,
+    ) -> Result<Vec<PricedAsset>, Box<dyn Error>> {
         self.runtime.block_on(self.async_fetch_assets_info(assets))
     }
 
     async fn async_fetch_assets_info(
         &self,
-        assets: Vec<Asset<Unpriced>>,
-    ) -> Result<Vec<Asset<Priced>>, Box<dyn Error>> {
-        let mut tasks: Vec<JoinHandle<Result<Asset<Priced>, reqwest::Error>>> = vec![];
-        let mut result: Vec<Asset<Priced>> = vec![];
+        assets: Vec<UnpricedAsset>,
+    ) -> Result<Vec<PricedAsset>, Box<dyn Error>> {
+        let mut tasks: Vec<JoinHandle<Result<PricedAsset, reqwest::Error>>> = vec![];
+        let mut result: Vec<PricedAsset> = vec![];
 
         for asset in assets {
             tasks.push(tokio::spawn(StockMarket::async_fetch_asset_info(
@@ -173,14 +163,14 @@ impl StockMarket {
     }
 
     async fn async_fetch_asset_info(
-        asset: Asset<Unpriced>,
+        asset: UnpricedAsset,
         client: reqwest::Client,
-    ) -> Result<Asset<Priced>, reqwest::Error> {
+    ) -> Result<PricedAsset, reqwest::Error> {
         let api = match asset.class {
             AssetClass::FII => "fiis",
             AssetClass::Stock => "stocks",
         };
-        let price_info: Priced = client
+        let price_info: PriceInfo = client
             .get(format!(
                 "https://mfinance.com.br/api/v1/{}/{}",
                 api,
@@ -191,11 +181,12 @@ impl StockMarket {
             .json()
             .await?;
 
-        Ok(Asset::<Priced>::new(
-            asset.name,
-            asset.class,
-            asset.quantity,
-            price_info,
-        ))
+        Ok(PricedAsset {
+            name: asset.name,
+            class: asset.class,
+            quantity: asset.quantity,
+            price: price_info.price,
+            last_price: price_info.last_price,
+        })
     }
 }

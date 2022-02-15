@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use stocks::{Asset, AssetClass, Portfolio, Priced, StockMarket};
+use stocks::{AssetClass, Portfolio, PricedAsset, StockMarket};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
@@ -56,14 +56,14 @@ impl StockCLI {
         }
     }
 
-    fn display_summary(summary: Vec<Asset<Priced>>) {
-        let mut stocks: Vec<Asset<Priced>> = summary
+    fn display_summary(summary: Vec<PricedAsset>) {
+        let mut stocks: Vec<PricedAsset> = summary
             .iter()
             .cloned()
             .filter(|asset| asset.class == AssetClass::Stock)
             .collect();
 
-        let mut fiis: Vec<Asset<Priced>> = summary
+        let mut fiis: Vec<PricedAsset> = summary
             .iter()
             .cloned()
             .filter(|asset| asset.class == AssetClass::FII)
@@ -85,16 +85,15 @@ impl StockCLI {
         let mut stocks_total_change: f64 = 0.0;
         stocks.sort_by_key(|asset| asset.name.clone());
         for stock in stocks {
-            let value = stock.quantity as f64 * stock.price_info.price;
-            let change =
-                (stock.price_info.price - stock.price_info.last_price) * stock.quantity as f64;
+            let value = stock.quantity as f64 * stock.price;
+            let change = (stock.price - stock.last_price) * stock.quantity as f64;
 
             stocks_total_value += value;
             stocks_total_change += change;
 
             println!(
                 "{}\t\t{}\t\tR${:6.2}\tR${:10.2}\t\tR${:10.2}",
-                stock.name, stock.quantity, stock.price_info.price, value, change,
+                stock.name, stock.quantity, stock.price, value, change,
             )
         }
 
@@ -113,15 +112,15 @@ impl StockCLI {
         let mut fiis_total_change: f64 = 0.0;
         fiis.sort_by_key(|asset| asset.name.clone());
         for fii in fiis {
-            let value = fii.quantity as f64 * fii.price_info.price;
-            let change = (fii.price_info.price - fii.price_info.last_price) * fii.quantity as f64;
+            let value = fii.quantity as f64 * fii.price;
+            let change = (fii.price - fii.last_price) * fii.quantity as f64;
 
             fiis_total_value += value;
             fiis_total_change += change;
 
             println!(
                 "{}\t\t{}\t\tR${:6.2}\tR${:10.2}\t\tR${:10.2}",
-                fii.name, fii.quantity, fii.price_info.price, value, change,
+                fii.name, fii.quantity, fii.price, value, change,
             )
         }
 
