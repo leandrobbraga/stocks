@@ -48,9 +48,13 @@ impl StockCLI {
             }
             Command::Summary => {
                 let assets = self.portfolio.assets();
-                let stock_market = StockMarket::new().unwrap();
+                let stock_market = StockMarket::new();
 
-                let prices = stock_market.fetch_assets_price(assets).unwrap();
+                let prices = stock_market
+                    .fetch_assets_price(assets)
+                    .into_iter()
+                    .filter_map(|asset| asset.ok())
+                    .collect();
                 StockCLI::display_summary(prices)
             }
         }

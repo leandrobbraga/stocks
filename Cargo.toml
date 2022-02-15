@@ -15,5 +15,5 @@ path = "src/bin.rs"
 structopt = "0.3.25"
 serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.73"
-reqwest = { version = "0.11.8", features = ["json"]}
-tokio = { version = "1.15.0", features = ["full"]}
+reqwest = { version = "0.11.8", features = ["json", "blocking"]}
+rayon = "1.5.1"

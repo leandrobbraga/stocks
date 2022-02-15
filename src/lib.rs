@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -6,9 +7,8 @@ use std::{
     io::{BufReader, BufWriter},
     path::Path,
 };
-use tokio::task::JoinHandle;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Portfolio {
     assets: HashMap<String, UnpricedAsset>,
 }
@@ -79,12 +79,6 @@ impl Portfolio {
     }
 }
 
-impl Default for Portfolio {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UnpricedAsset {
     pub name: String,
@@ -121,65 +115,33 @@ pub enum AssetClass {
 #[derive(Debug)]
 pub struct NotEnoughAssetToSell;
 
+#[derive(Default)]
 pub struct StockMarket {
-    runtime: tokio::runtime::Runtime,
-    client: reqwest::Client,
+    client: reqwest::blocking::Client,
 }
 
 impl StockMarket {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        Ok(StockMarket {
-            runtime: tokio::runtime::Runtime::new()?,
-            client: reqwest::Client::new(),
-        })
-    }
-
-    pub fn fetch_assets_price(
-        &self,
-        assets: Vec<UnpricedAsset>,
-    ) -> Result<Vec<PricedAsset>, Box<dyn Error>> {
-        self.runtime.block_on(self.async_fetch_assets_info(assets))
-    }
-
-    async fn async_fetch_assets_info(
-        &self,
-        assets: Vec<UnpricedAsset>,
-    ) -> Result<Vec<PricedAsset>, Box<dyn Error>> {
-        let mut tasks: Vec<JoinHandle<Result<PricedAsset, reqwest::Error>>> = vec![];
-        let mut result: Vec<PricedAsset> = vec![];
-
-        for asset in assets {
-            tasks.push(tokio::spawn(StockMarket::async_fetch_asset_info(
-                asset,
-                self.client.clone(),
-            )));
+    pub fn new() -> Self {
+        StockMarket {
+            client: reqwest::blocking::Client::new(),
         }
-
-        for task in tasks {
-            result.push(task.await??);
-        }
-
-        Ok(result)
     }
 
-    async fn async_fetch_asset_info(
-        asset: UnpricedAsset,
-        client: reqwest::Client,
-    ) -> Result<PricedAsset, reqwest::Error> {
+    pub fn fetch_asset_price(&self, asset: UnpricedAsset) -> Result<PricedAsset, reqwest::Error> {
         let api = match asset.class {
             AssetClass::FII => "fiis",
             AssetClass::Stock => "stocks",
         };
-        let price_info: PriceInfo = client
+
+        let price_info: PriceInfo = self
+            .client
             .get(format!(
                 "https://mfinance.com.br/api/v1/{}/{}",
                 api,
                 asset.name.to_lowercase()
             ))
-            .send()
-            .await?
-            .json()
-            .await?;
+            .send()?
+            .json()?;
 
         Ok(PricedAsset {
             name: asset.name,
@@ -188,5 +150,15 @@ impl StockMarket {
             price: price_info.price,
             last_price: price_info.last_price,
         })
+    }
+
+    pub fn fetch_assets_price(
+        &self,
+        assets: Vec<UnpricedAsset>,
+    ) -> Vec<Result<PricedAsset, reqwest::Error>> {
+        assets
+            .into_par_iter()
+            .map(|asset| self.fetch_asset_price(asset))
+            .collect()
     }
 }
