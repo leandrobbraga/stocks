@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use stocks::{AssetClass, Portfolio, PricedAsset, StockMarket};
+use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
+use stocks::{Portfolio, PricedAsset, StockMarket};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
@@ -84,102 +85,76 @@ impl StockCLI {
     }
 
     fn display_summary(summary: Vec<PricedAsset>) {
-        let mut stocks: Vec<PricedAsset> = summary
+        let mut contents: Vec<Vec<CellStruct>> = summary.iter().map(StockCLI::format_row).collect();
+        contents.push(StockCLI::format_totals(&summary));
+
+        let table = contents.table().title(vec![
+            "Name".cell().bold(true).justify(Justify::Center),
+            "Quantity".cell().bold(true).justify(Justify::Center),
+            "Current Price".cell().bold(true).justify(Justify::Center),
+            "Current Value".cell().bold(true).justify(Justify::Center),
+            "Change (Day)".cell().bold(true).justify(Justify::Center),
+            "Average Price".cell().bold(true).justify(Justify::Center),
+            "Profit".cell().bold(true).justify(Justify::Center),
+        ]);
+
+        print_stdout(table).unwrap();
+    }
+
+    fn format_row(asset: &PricedAsset) -> Vec<CellStruct> {
+        let value = asset.quantity as f64 * asset.price;
+        let change = (asset.price - asset.last_price) * asset.quantity as f64;
+        let profit = asset.quantity as f64 * (asset.price - asset.average_price);
+
+        return vec![
+            asset.name.clone().cell().justify(Justify::Center),
+            asset.quantity.cell().justify(Justify::Right),
+            format!("R$ {:10.2}", asset.price)
+                .cell()
+                .justify(Justify::Right),
+            format!("R$ {value:10.2}").cell().justify(Justify::Right),
+            format!("R$ {change:10.2}").cell().justify(Justify::Right),
+            format!("R$ {:10.2}", asset.average_price)
+                .cell()
+                .justify(Justify::Right),
+            format!("R$ {profit:10.2}").cell().justify(Justify::Right),
+        ];
+    }
+
+    fn format_totals(assets: &Vec<PricedAsset>) -> Vec<CellStruct> {
+        let total_value: f64 = assets
             .iter()
-            .cloned()
-            .filter(|asset| asset.class == AssetClass::Stock)
-            .collect();
+            .map(|asset| asset.quantity as f64 * asset.price)
+            .sum();
 
-        let mut fiis: Vec<PricedAsset> = summary
+        let total_change: f64 = assets
             .iter()
-            .cloned()
-            .filter(|asset| asset.class == AssetClass::FII)
-            .collect();
+            .map(|asset| (asset.price - asset.last_price) * asset.quantity as f64)
+            .sum();
 
-        println!(
-            "----------------------------------------------------------------------------------------------------------------------------"
-        );
-        println!(
-            "                                                     Portfolio  Summary                                                     "
-        );
-        println!(
-            "----------------------------------------------------------------------------------------------------------------------------"
-        );
+        let total_profit: f64 = assets
+            .iter()
+            .map(|asset| asset.quantity as f64 * (asset.price - asset.average_price))
+            .sum();
 
-        println!(
-            "Name\t    Quantity\t\t   Price\t       Value\t\t      Change\t       Average Price  Current Profit"
-        );
-
-        let mut stocks_total_value: f64 = 0.0;
-        let mut stocks_total_change: f64 = 0.0;
-        let mut stocks_total_profit: f64 = 0.0;
-
-        stocks.sort_by_key(|asset| asset.name.clone());
-        for stock in stocks {
-            let value = stock.quantity as f64 * stock.price;
-            let change = (stock.price - stock.last_price) * stock.quantity as f64;
-
-            let profit = stock.quantity as f64 * (stock.price - stock.average_price);
-
-            stocks_total_value += value;
-            stocks_total_change += change;
-            stocks_total_profit += profit;
-
-            println!(
-                "{}\t\t{}\t\tR${:6.2}\tR${value:10.2}\t\tR${change:10.2}\t\tR${:10.2}\tR${profit:10.2}",
-                stock.name, stock.quantity, stock.price, stock.average_price,
-            )
-        }
-
-        println!(
-            "............................................................................................................................"
-        );
-        println!(
-            "Stocks\t\t\t\t\t\tR${stocks_total_value:10.2}\t\tR${stocks_total_change:10.2}\t\t\t        R${stocks_total_profit:10.2}",
-        );
-        println!(
-            "----------------------------------------------------------------------------------------------------------------------------"
-        );
-
-        let mut fiis_total_value: f64 = 0.0;
-        let mut fiis_total_change: f64 = 0.0;
-        let mut fiis_total_profit: f64 = 0.0;
-
-        fiis.sort_by_key(|asset| asset.name.clone());
-        for fii in fiis {
-            let value = fii.quantity as f64 * fii.price;
-            let change = (fii.price - fii.last_price) * fii.quantity as f64;
-
-            let profit = fii.quantity as f64 * (fii.price - fii.average_price);
-
-            fiis_total_value += value;
-            fiis_total_change += change;
-            fiis_total_profit += profit;
-
-            println!(
-                "{}\t\t{}\t\tR${:6.2}\tR${value:10.2}\t\tR${change:10.2}\t\tR${:10.2}\tR${profit:10.2}",
-                fii.name, fii.quantity, fii.price, fii.average_price,
-            )
-        }
-
-        println!(
-            "............................................................................................................................"
-        );
-        println!(
-            "FIIs\t\t\t\t\t\tR${fiis_total_value:10.2}\t\tR${fiis_total_change:10.2}\t\t\t        R${fiis_total_profit:10.2}",
-        );
-        println!(
-            "----------------------------------------------------------------------------------------------------------------------------"
-        );
-        println!(
-            "Total\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}\t\t\t        R${:10.2}",
-            stocks_total_value + fiis_total_value,
-            stocks_total_change + fiis_total_change,
-            stocks_total_profit + fiis_total_profit
-        );
-        println!(
-            "----------------------------------------------------------------------------------------------------------------------------"
-        );
+        return vec![
+            "Total".cell().justify(Justify::Center).bold(true),
+            "".cell(),
+            "".cell(),
+            format!("R$ {total_value:10.2}")
+                .cell()
+                .justify(Justify::Right)
+                .bold(true),
+            format!("R$ {total_change:10.2}")
+                .cell()
+                .justify(Justify::Right)
+                .bold(true),
+            "".cell(),
+            format!("R$ {total_profit:10.2}")
+                .cell()
+                .justify(Justify::Right)
+                .bold(true),
+        ];
     }
 }
 

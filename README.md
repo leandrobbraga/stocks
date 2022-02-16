@@ -17,7 +17,7 @@ Simple stocks management system.
     - [X] Add information about the Asset (FII or Stock)
 - [X] Beautify outputs
 - [X] Add average price
-    - [ ] Add current profit in summary
+    - [X] Add current profit in summary
     - [ ] Parse XPI "nota de corretagem"
 - [ ] Improve error handling
 - [ ] Tight API
