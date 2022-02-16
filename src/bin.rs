@@ -34,23 +34,40 @@ impl StockCLI {
 
     fn run_command(&mut self, command: Command) {
         match command {
-            Command::Buy { symbol, quantity } => {
+            Command::Buy {
+                symbol,
+                quantity,
+                price,
+            } => {
                 let stock_market = StockMarket::new();
                 let class = stock_market.asset_class(&symbol);
 
                 match class {
-                    Some(class) => self.portfolio.buy(&symbol, quantity, class),
+                    Some(class) => self.portfolio.buy(&symbol, class, quantity, price),
                     None => {
                         println!("We could not find {symbol} asset in the stock market.");
                         std::process::exit(1)
                     }
                 }
             }
-            Command::Sell { symbol, quantity } => {
-                if self.portfolio.sell(&symbol, quantity).is_err() {
-                    println!("Your portfolio didn't had enough {symbol} to sell.");
+            Command::Sell {
+                symbol,
+                quantity,
+                price,
+            } => {
+                if let Some(asset) = self.portfolio.stock(&symbol) {
+                    let profit = quantity as f64 * (price - asset.average_price);
+
+                    if self.portfolio.sell(&symbol, quantity).is_err() {
+                        println!("Your portfolio didn't had enough {symbol} to sell.");
+                        std::process::exit(1)
+                    } else {
+                        println!("You sold {quantity} {symbol} profiting R${profit:10.2}.")
+                    };
+                } else {
+                    println!("You don't own any {symbol} to sell.");
                     std::process::exit(1)
-                };
+                }
             }
             Command::Summary => {
                 let assets = self.portfolio.assets();
@@ -80,77 +97,88 @@ impl StockCLI {
             .collect();
 
         println!(
-            "------------------------------------------------------------------------------------"
+            "----------------------------------------------------------------------------------------------------------------------------"
         );
         println!(
-            "                                 Portfolio  Summary                                 "
+            "                                                     Portfolio  Summary                                                     "
         );
         println!(
-            "------------------------------------------------------------------------------------"
+            "----------------------------------------------------------------------------------------------------------------------------"
         );
 
-        println!("Name\t\tQuantity\tPrice\t\tValue\t\t\tChange");
+        println!(
+            "Name\t    Quantity\t\t   Price\t       Value\t\t      Change\t       Average Price  Current Profit"
+        );
 
         let mut stocks_total_value: f64 = 0.0;
         let mut stocks_total_change: f64 = 0.0;
+        let mut stocks_total_profit: f64 = 0.0;
+
         stocks.sort_by_key(|asset| asset.name.clone());
         for stock in stocks {
             let value = stock.quantity as f64 * stock.price;
             let change = (stock.price - stock.last_price) * stock.quantity as f64;
 
+            let profit = stock.quantity as f64 * (stock.price - stock.average_price);
+
             stocks_total_value += value;
             stocks_total_change += change;
+            stocks_total_profit += profit;
 
             println!(
-                "{}\t\t{}\t\tR${:6.2}\tR${:10.2}\t\tR${:10.2}",
-                stock.name, stock.quantity, stock.price, value, change,
+                "{}\t\t{}\t\tR${:6.2}\tR${value:10.2}\t\tR${change:10.2}\t\tR${:10.2}\tR${profit:10.2}",
+                stock.name, stock.quantity, stock.price, stock.average_price,
             )
         }
 
         println!(
-            "...................................................................................."
+            "............................................................................................................................"
         );
         println!(
-            "Stocks\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}",
-            stocks_total_value, stocks_total_change
+            "Stocks\t\t\t\t\t\tR${stocks_total_value:10.2}\t\tR${stocks_total_change:10.2}\t\t\t        R${stocks_total_profit:10.2}",
         );
         println!(
-            "------------------------------------------------------------------------------------"
+            "----------------------------------------------------------------------------------------------------------------------------"
         );
 
         let mut fiis_total_value: f64 = 0.0;
         let mut fiis_total_change: f64 = 0.0;
+        let mut fiis_total_profit: f64 = 0.0;
+
         fiis.sort_by_key(|asset| asset.name.clone());
         for fii in fiis {
             let value = fii.quantity as f64 * fii.price;
             let change = (fii.price - fii.last_price) * fii.quantity as f64;
 
+            let profit = fii.quantity as f64 * (fii.price - fii.average_price);
+
             fiis_total_value += value;
             fiis_total_change += change;
+            fiis_total_profit += profit;
 
             println!(
-                "{}\t\t{}\t\tR${:6.2}\tR${:10.2}\t\tR${:10.2}",
-                fii.name, fii.quantity, fii.price, value, change,
+                "{}\t\t{}\t\tR${:6.2}\tR${value:10.2}\t\tR${change:10.2}\t\tR${:10.2}\tR${profit:10.2}",
+                fii.name, fii.quantity, fii.price, fii.average_price,
             )
         }
 
         println!(
-            "...................................................................................."
+            "............................................................................................................................"
         );
         println!(
-            "FIIs\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}",
-            fiis_total_value, fiis_total_change
+            "FIIs\t\t\t\t\t\tR${fiis_total_value:10.2}\t\tR${fiis_total_change:10.2}\t\t\t        R${fiis_total_profit:10.2}",
         );
         println!(
-            "------------------------------------------------------------------------------------"
+            "----------------------------------------------------------------------------------------------------------------------------"
         );
         println!(
-            "Total\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}",
+            "Total\t\t\t\t\t\tR${:10.2}\t\tR${:10.2}\t\t\t        R${:10.2}",
             stocks_total_value + fiis_total_value,
-            stocks_total_change + fiis_total_change
+            stocks_total_change + fiis_total_change,
+            stocks_total_profit + fiis_total_profit
         );
         println!(
-            "------------------------------------------------------------------------------------"
+            "----------------------------------------------------------------------------------------------------------------------------"
         );
     }
 }
@@ -168,8 +196,16 @@ enum Command {
     Buy {
         #[structopt(name = "SYMBOL", help = "The Stock ticker (e.g. BBAS3).")]
         symbol: String,
-        #[structopt(name = "VALUE", help = "How much it is going to be bought (e.g. 100).")]
+        #[structopt(
+            name = "QUANTITY",
+            help = "How much it is going to be bought (e.g. 100)."
+        )]
         quantity: u32,
+        #[structopt(
+            name = "PRICE",
+            help = "The price which the asset was bought (e.g. 10.0)."
+        )]
+        price: f64,
     },
     #[structopt(about = "Sells a stock.")]
     Sell {
@@ -177,6 +213,11 @@ enum Command {
         symbol: String,
         #[structopt(name = "VALUE", help = "How much it is going to be sold (e.g. 100).")]
         quantity: u32,
+        #[structopt(
+            name = "PRICE",
+            help = "The price which the asset was bought (e.g. 10.0)."
+        )]
+        price: f64,
     },
     #[structopt(about = "Summarizes the current portfolio.")]
     Summary,

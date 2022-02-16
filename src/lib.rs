@@ -34,9 +34,17 @@ impl Portfolio {
         Ok(serde_json::to_writer(writer, &self)?)
     }
 
-    pub fn buy(&mut self, symbol: &str, quantity: u32, class: AssetClass) {
+    pub fn buy(&mut self, symbol: &str, class: AssetClass, quantity: u32, price: f64) {
         match self.assets.get_mut(&symbol.to_uppercase()) {
-            Some(entry) => entry.quantity += quantity,
+            Some(entry) => {
+                let p0 = entry.average_price;
+                let q0 = entry.quantity as f64;
+                let p1 = price;
+                let q1 = quantity as f64;
+
+                entry.average_price = ((p0 * q0) + (p1 * q1)) / (q0 + q1);
+                entry.quantity += quantity;
+            }
             None => {
                 self.assets.insert(
                     symbol.to_uppercase(),
@@ -44,6 +52,7 @@ impl Portfolio {
                         name: symbol.to_uppercase(),
                         class,
                         quantity,
+                        average_price: price,
                     },
                 );
             }
@@ -71,6 +80,10 @@ impl Portfolio {
     pub fn assets(&self) -> Vec<UnpricedAsset> {
         self.assets.values().cloned().collect()
     }
+
+    pub fn stock(&self, symbol: &str) -> Option<&UnpricedAsset> {
+        self.assets.get(&symbol.to_uppercase())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,6 +91,7 @@ pub struct UnpricedAsset {
     pub name: String,
     pub class: AssetClass,
     pub quantity: u32,
+    pub average_price: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -85,12 +99,10 @@ pub struct PricedAsset {
     pub name: String,
     pub class: AssetClass,
     pub quantity: u32,
+    pub average_price: f64,
     pub price: f64,
     pub last_price: f64,
 }
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Unpriced;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PriceInfo {
@@ -140,6 +152,7 @@ impl StockMarket {
             name: asset.name,
             class: asset.class,
             quantity: asset.quantity,
+            average_price: asset.average_price,
             price: price_info.price,
             last_price: price_info.last_price,
         })

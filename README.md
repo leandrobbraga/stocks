@@ -16,11 +16,12 @@ Simple stocks management system.
 - [X] Check before adding any asset to the portfolio
     - [X] Add information about the Asset (FII or Stock)
 - [X] Beautify outputs
-- [ ] Logging
-- [ ] Add trade history
+- [X] Add average price
+    - [ ] Add current profit in summary
     - [ ] Parse XPI "nota de corretagem"
 - [ ] Improve error handling
 - [ ] Tight API
 - [ ] Testing
 - [ ] Reduce dependencies features to the minimum necessary
+- [ ] Logging
 - [ ] Documentation
