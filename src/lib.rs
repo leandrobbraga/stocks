@@ -34,16 +34,10 @@ impl Portfolio {
         Ok(serde_json::to_writer(writer, &self)?)
     }
 
-    pub fn buy(&mut self, symbol: &str, quantity: u32) {
+    pub fn buy(&mut self, symbol: &str, quantity: u32, class: AssetClass) {
         match self.assets.get_mut(&symbol.to_uppercase()) {
             Some(entry) => entry.quantity += quantity,
             None => {
-                let class = if symbol.ends_with("11") {
-                    AssetClass::FII
-                } else {
-                    AssetClass::Stock
-                };
-
                 self.assets.insert(
                     symbol.to_uppercase(),
                     UnpricedAsset {
@@ -132,7 +126,6 @@ impl StockMarket {
             AssetClass::FII => "fiis",
             AssetClass::Stock => "stocks",
         };
-
         let price_info: PriceInfo = self
             .client
             .get(format!(
@@ -160,5 +153,37 @@ impl StockMarket {
             .into_par_iter()
             .map(|asset| self.fetch_asset_price(asset))
             .collect()
+    }
+
+    pub fn asset_class(&self, asset: &str) -> Option<AssetClass> {
+        let apis = ["fiis", "stocks"];
+
+        let result: Vec<bool> = apis
+            .into_par_iter()
+            .map(|api| {
+                if let Ok(list) = self.asset_list(api) {
+                    list.contains(&asset.to_uppercase())
+                } else {
+                    false
+                }
+            })
+            .collect();
+
+        // Rayon maintains the original order
+        match result[..] {
+            [true, false] => Some(AssetClass::FII),
+            [false, true] => Some(AssetClass::Stock),
+            _ => None,
+        }
+    }
+
+    fn asset_list(&self, api: &str) -> Result<Vec<String>, reqwest::Error> {
+        let result: Vec<String> = self
+            .client
+            .get(format!("https://mfinance.com.br/api/v1/{}/symbols/", api,))
+            .send()?
+            .json()?;
+
+        Ok(result)
     }
 }

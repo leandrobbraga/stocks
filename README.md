@@ -13,10 +13,9 @@ Simple stocks management system.
     - [ ] Deal with ETF
 - [X] Track portfolio performance
 - [X] Create StockMarket namespace
-- [ ] Get all stock information in a single request
-- [ ] Check before adding any asset to the portfolio
-    - [ ] Add information about the Asset (FII or Stock)
-- [ ] Beautify outputs
+- [X] Check before adding any asset to the portfolio
+    - [X] Add information about the Asset (FII or Stock)
+- [X] Beautify outputs
 - [ ] Logging
 - [ ] Add trade history
     - [ ] Parse XPI "nota de corretagem"

@@ -35,14 +35,20 @@ impl StockCLI {
     fn run_command(&mut self, command: Command) {
         match command {
             Command::Buy { symbol, quantity } => {
-                self.portfolio.buy(&symbol, quantity);
+                let stock_market = StockMarket::new();
+                let class = stock_market.asset_class(&symbol);
+
+                match class {
+                    Some(class) => self.portfolio.buy(&symbol, quantity, class),
+                    None => {
+                        println!("We could not find {symbol} asset in the stock market.");
+                        std::process::exit(1)
+                    }
+                }
             }
             Command::Sell { symbol, quantity } => {
                 if self.portfolio.sell(&symbol, quantity).is_err() {
-                    println!(
-                        "Your portfolio didn't had enough {} to sell.",
-                        symbol.to_uppercase()
-                    );
+                    println!("Your portfolio didn't had enough {symbol} to sell.");
                     std::process::exit(1)
                 };
             }
