@@ -87,7 +87,10 @@ impl StockCLI {
         }
     }
 
-    fn display_summary(summary: Vec<PricedAsset>) {
+    fn display_summary(mut summary: Vec<PricedAsset>) {
+        // This makes the output table stable (i.e. the order of the assets are always the same.)
+        summary.sort();
+
         let mut contents: Vec<Vec<CellStruct>> = summary.iter().map(StockCLI::format_row).collect();
         contents.push(StockCLI::format_totals(&summary));
 
