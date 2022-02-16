@@ -22,6 +22,5 @@ Simple stocks management system.
 - [ ] Improve error handling
 - [ ] Tight API
 - [ ] Testing
-- [ ] Reduce dependencies features to the minimum necessary
 - [ ] Logging
 - [ ] Documentation

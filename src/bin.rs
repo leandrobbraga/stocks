@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
+use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Color, Style, Table};
 use stocks::{Portfolio, PricedAsset, StockMarket};
 use structopt::StructOpt;
 
@@ -94,8 +94,10 @@ impl StockCLI {
             "Current Price".cell().bold(true).justify(Justify::Center),
             "Current Value".cell().bold(true).justify(Justify::Center),
             "Change (Day)".cell().bold(true).justify(Justify::Center),
+            "% Change (Day)".cell().bold(true).justify(Justify::Center),
             "Average Price".cell().bold(true).justify(Justify::Center),
             "Profit".cell().bold(true).justify(Justify::Center),
+            "% Profit".cell().bold(true).justify(Justify::Center),
         ]);
 
         print_stdout(table).unwrap();
@@ -103,8 +105,13 @@ impl StockCLI {
 
     fn format_row(asset: &PricedAsset) -> Vec<CellStruct> {
         let value = asset.quantity as f64 * asset.price;
-        let change = (asset.price - asset.last_price) * asset.quantity as f64;
-        let profit = asset.quantity as f64 * (asset.price - asset.average_price);
+        let original_value = asset.last_price * asset.quantity as f64;
+        let current_value = asset.price * asset.quantity as f64;
+        let change = current_value - original_value;
+        let change_percentage = (current_value / original_value - 1.0) * 100.0;
+        let cost = asset.quantity as f64 * asset.average_price;
+        let profit = current_value - cost;
+        let profit_percentage = (current_value / cost - 1.0) * 100.0;
 
         return vec![
             asset.name.clone().cell().justify(Justify::Center),
@@ -113,48 +120,83 @@ impl StockCLI {
                 .cell()
                 .justify(Justify::Right),
             format!("R$ {value:10.2}").cell().justify(Justify::Right),
-            format!("R$ {change:10.2}").cell().justify(Justify::Right),
+            format!("R$ {change:10.2}")
+                .cell()
+                .justify(Justify::Right)
+                .foreground_color(StockCLI::get_color(change)),
+            format!("{change_percentage:6.2}%")
+                .cell()
+                .justify(Justify::Center)
+                .foreground_color(StockCLI::get_color(change_percentage)),
             format!("R$ {:10.2}", asset.average_price)
                 .cell()
                 .justify(Justify::Right),
-            format!("R$ {profit:10.2}").cell().justify(Justify::Right),
+            format!("R$ {profit:10.2}")
+                .cell()
+                .justify(Justify::Right)
+                .foreground_color(StockCLI::get_color(profit)),
+            format!("{profit_percentage:6.2}%")
+                .cell()
+                .justify(Justify::Center)
+                .foreground_color(StockCLI::get_color(profit_percentage)),
         ];
     }
 
-    fn format_totals(assets: &Vec<PricedAsset>) -> Vec<CellStruct> {
-        let total_value: f64 = assets
+    fn format_totals(assets: &[PricedAsset]) -> Vec<CellStruct> {
+        let current_value: f64 = assets
             .iter()
             .map(|asset| asset.quantity as f64 * asset.price)
             .sum();
-
-        let total_change: f64 = assets
+        let original_value: f64 = assets
             .iter()
-            .map(|asset| (asset.price - asset.last_price) * asset.quantity as f64)
+            .map(|asset| asset.quantity as f64 * asset.last_price)
+            .sum();
+        let cost: f64 = assets
+            .iter()
+            .map(|asset| asset.quantity as f64 * asset.average_price)
             .sum();
 
-        let total_profit: f64 = assets
-            .iter()
-            .map(|asset| asset.quantity as f64 * (asset.price - asset.average_price))
-            .sum();
+        let change = current_value - original_value;
+        let change_percentage = (current_value / original_value - 1.0) * 100.0;
+        let profit = current_value - cost;
+        let profit_percentage = (current_value / cost - 1.0) * 100.0;
 
         return vec![
             "Total".cell().justify(Justify::Center).bold(true),
             "".cell(),
             "".cell(),
-            format!("R$ {total_value:10.2}")
+            format!("R$ {current_value:10.2}")
                 .cell()
                 .justify(Justify::Right)
                 .bold(true),
-            format!("R$ {total_change:10.2}")
+            format!("R$ {change:10.2}")
                 .cell()
                 .justify(Justify::Right)
-                .bold(true),
+                .foreground_color(StockCLI::get_color(change)),
+            format!("{change_percentage:6.2}%")
+                .cell()
+                .justify(Justify::Center)
+                .bold(true)
+                .foreground_color(StockCLI::get_color(change_percentage)),
             "".cell(),
-            format!("R$ {total_profit:10.2}")
+            format!("R$ {profit:10.2}")
                 .cell()
                 .justify(Justify::Right)
-                .bold(true),
+                .foreground_color(StockCLI::get_color(profit)),
+            format!("{profit_percentage:6.2}%")
+                .cell()
+                .justify(Justify::Center)
+                .bold(true)
+                .foreground_color(StockCLI::get_color(profit_percentage)),
         ];
+    }
+
+    fn get_color(value: f64) -> Option<Color> {
+        match value.partial_cmp(&0.0).unwrap() {
+            std::cmp::Ordering::Less => Some(Color::Red),
+            std::cmp::Ordering::Equal => None,
+            std::cmp::Ordering::Greater => Some(Color::Green),
+        }
     }
 }
 
