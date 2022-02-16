@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Color, Style, Table};
+use cli_table::{
+    format::{Border, Justify, Separator},
+    print_stdout, Cell, CellStruct, Color, Style, Table,
+};
 use stocks::{Portfolio, PricedAsset, StockMarket};
 use structopt::StructOpt;
 
@@ -88,17 +91,21 @@ impl StockCLI {
         let mut contents: Vec<Vec<CellStruct>> = summary.iter().map(StockCLI::format_row).collect();
         contents.push(StockCLI::format_totals(&summary));
 
-        let table = contents.table().title(vec![
-            "Name".cell().bold(true).justify(Justify::Center),
-            "Quantity".cell().bold(true).justify(Justify::Center),
-            "Current Price".cell().bold(true).justify(Justify::Center),
-            "Current Value".cell().bold(true).justify(Justify::Center),
-            "Change (Day)".cell().bold(true).justify(Justify::Center),
-            "% Change (Day)".cell().bold(true).justify(Justify::Center),
-            "Average Price".cell().bold(true).justify(Justify::Center),
-            "Profit".cell().bold(true).justify(Justify::Center),
-            "% Profit".cell().bold(true).justify(Justify::Center),
-        ]);
+        let table = contents
+            .table()
+            .title(vec![
+                "Name".cell().bold(true).justify(Justify::Left),
+                "Quantity".cell().bold(true).justify(Justify::Center),
+                "Current Price".cell().bold(true).justify(Justify::Center),
+                "Current Value".cell().bold(true).justify(Justify::Center),
+                "Change (Day)".cell().bold(true).justify(Justify::Center),
+                "% Change (Day)".cell().bold(true).justify(Justify::Center),
+                "Average Price".cell().bold(true).justify(Justify::Center),
+                "Profit".cell().bold(true).justify(Justify::Center),
+                "% Profit".cell().bold(true).justify(Justify::Center),
+            ])
+            .separator(Separator::builder().build())
+            .border(Border::builder().build());
 
         print_stdout(table).unwrap();
     }
@@ -114,7 +121,7 @@ impl StockCLI {
         let profit_percentage = (current_value / cost - 1.0) * 100.0;
 
         return vec![
-            asset.name.clone().cell().justify(Justify::Center),
+            asset.name.clone().cell().justify(Justify::Left),
             asset.quantity.cell().justify(Justify::Right),
             format!("R$ {:10.2}", asset.price)
                 .cell()
@@ -126,7 +133,7 @@ impl StockCLI {
                 .foreground_color(StockCLI::get_color(change)),
             format!("{change_percentage:6.2}%")
                 .cell()
-                .justify(Justify::Center)
+                .justify(Justify::Right)
                 .foreground_color(StockCLI::get_color(change_percentage)),
             format!("R$ {:10.2}", asset.average_price)
                 .cell()
@@ -137,7 +144,7 @@ impl StockCLI {
                 .foreground_color(StockCLI::get_color(profit)),
             format!("{profit_percentage:6.2}%")
                 .cell()
-                .justify(Justify::Center)
+                .justify(Justify::Right)
                 .foreground_color(StockCLI::get_color(profit_percentage)),
         ];
     }
@@ -162,7 +169,7 @@ impl StockCLI {
         let profit_percentage = (current_value / cost - 1.0) * 100.0;
 
         return vec![
-            "Total".cell().justify(Justify::Center).bold(true),
+            "Total".cell().justify(Justify::Left).bold(true),
             "".cell(),
             "".cell(),
             format!("R$ {current_value:10.2}")
@@ -175,7 +182,7 @@ impl StockCLI {
                 .foreground_color(StockCLI::get_color(change)),
             format!("{change_percentage:6.2}%")
                 .cell()
-                .justify(Justify::Center)
+                .justify(Justify::Right)
                 .bold(true)
                 .foreground_color(StockCLI::get_color(change_percentage)),
             "".cell(),
@@ -185,7 +192,7 @@ impl StockCLI {
                 .foreground_color(StockCLI::get_color(profit)),
             format!("{profit_percentage:6.2}%")
                 .cell()
-                .justify(Justify::Center)
+                .justify(Justify::Right)
                 .bold(true)
                 .foreground_color(StockCLI::get_color(profit_percentage)),
         ];

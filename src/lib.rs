@@ -78,7 +78,11 @@ impl Portfolio {
     }
 
     pub fn assets(&self) -> Vec<UnpricedAsset> {
-        self.assets.values().cloned().collect()
+        let mut assets: Vec<UnpricedAsset> = self.assets.values().cloned().collect();
+
+        assets.sort();
+
+        assets
     }
 
     pub fn stock(&self, symbol: &str) -> Option<&UnpricedAsset> {
@@ -92,6 +96,28 @@ pub struct UnpricedAsset {
     pub class: AssetClass,
     pub quantity: u32,
     pub average_price: f64,
+}
+
+impl PartialEq for UnpricedAsset {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl PartialOrd for UnpricedAsset {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl Eq for UnpricedAsset {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl Ord for UnpricedAsset {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(&other.name)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
