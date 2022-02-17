@@ -4,7 +4,10 @@ use cli_table::{
     format::{Border, Justify, Separator},
     print_stdout, Cell, CellStruct, Color, Style, Table,
 };
-use stocks::{Portfolio, PricedAsset, StockMarket};
+use stocks::{
+    portfolio::{Portfolio, PricedAsset},
+    stock_market::StockMarket,
+};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
