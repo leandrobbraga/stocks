@@ -104,28 +104,6 @@ pub struct PricedAsset {
     pub last_price: f64,
 }
 
-impl PartialEq for PricedAsset {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
-impl PartialOrd for PricedAsset {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.name.partial_cmp(&other.name)
-    }
-}
-
-impl Eq for PricedAsset {
-    fn assert_receiver_is_total_eq(&self) {}
-}
-
-impl Ord for PricedAsset {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.name.cmp(&other.name)
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PriceInfo {
     #[serde(rename = "lastPrice")]
