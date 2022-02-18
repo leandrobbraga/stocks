@@ -19,6 +19,7 @@ Simple stocks management system.
 - [X] Add average price
     - [X] Add current profit in summary
     - [ ] Parse XPI "nota de corretagem"
+- [ ] Log every profit/loss for tax pay
 - [ ] Improve error handling
 - [ ] Tight API
 - [ ] Testing

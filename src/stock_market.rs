@@ -2,6 +2,8 @@ use rayon::prelude::*;
 
 use crate::portfolio::{AssetClass, PriceInfo, PricedAsset, UnpricedAsset};
 
+static API_URL: &str = "https://mfinance.com.br/api/v1";
+
 #[derive(Default)]
 pub struct StockMarket {
     client: reqwest::blocking::Client,
@@ -21,11 +23,7 @@ impl StockMarket {
         };
         let price_info: PriceInfo = self
             .client
-            .get(format!(
-                "https://mfinance.com.br/api/v1/{}/{}",
-                api,
-                asset.name.to_lowercase()
-            ))
+            .get(format!("{API_URL}/{api}/{}", asset.name.to_lowercase()))
             .send()?
             .json()?;
 
@@ -74,7 +72,7 @@ impl StockMarket {
     fn asset_list(&self, api: &str) -> Result<Vec<String>, reqwest::Error> {
         let result: Vec<String> = self
             .client
-            .get(format!("https://mfinance.com.br/api/v1/{}/symbols/", api,))
+            .get(format!("{API_URL}/{api}/symbols/"))
             .send()?
             .json()?;
 
