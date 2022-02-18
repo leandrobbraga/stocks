@@ -46,11 +46,11 @@ pub fn build_data(assets: Vec<PricedAsset>) -> Vec<Data> {
     assets.into_iter().map(Data::from_asset).collect()
 }
 
-pub fn render_table(mut assets: Vec<Data>) -> Result<(), Box<dyn Error>> {
-    assets.sort_by(|a, b| a.name.cmp(&b.name));
+pub fn render_table(mut data: Vec<Data>) -> Result<(), Box<dyn Error>> {
+    data.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let mut contents: Vec<Vec<CellStruct>> = assets.iter().map(format_row).collect();
-    contents.push(format_totals(&assets));
+    let mut contents: Vec<Vec<CellStruct>> = data.iter().map(format_row).collect();
+    contents.push(format_totals(&data));
 
     let table = contents
         .table()

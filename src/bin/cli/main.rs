@@ -41,51 +41,58 @@ impl StockCLI {
                 symbol,
                 quantity,
                 price,
-            } => {
-                let stock_market = StockMarket::new();
-                let class = stock_market.asset_class(&symbol);
-
-                match class {
-                    Some(class) => self.portfolio.buy(&symbol, class, quantity, price),
-                    None => {
-                        println!("We could not find {symbol} asset in the stock market.");
-                        std::process::exit(1)
-                    }
-                }
-            }
+            } => self.buy(&symbol, quantity, price),
             Command::Sell {
                 symbol,
                 quantity,
                 price,
-            } => {
-                if let Some(asset) = self.portfolio.stock(&symbol) {
-                    let profit = quantity as f64 * (price - asset.average_price);
+            } => self.sell(&symbol, quantity, price),
+            Command::Summary => self.summarize(),
+        }
+    }
 
-                    if self.portfolio.sell(&symbol, quantity).is_err() {
-                        println!("Your portfolio didn't had enough {symbol} to sell.");
-                        std::process::exit(1)
-                    } else {
-                        println!("You sold {quantity} {symbol} profiting R${profit:10.2}.")
-                    };
-                } else {
-                    println!("You don't own any {symbol} to sell.");
-                    std::process::exit(1)
-                }
-            }
-            Command::Summary => {
-                let assets = self.portfolio.assets();
-                let stock_market = StockMarket::new();
+    fn buy(&mut self, symbol: &str, quantity: u32, price: f64) {
+        let stock_market = StockMarket::new();
+        let class = stock_market.asset_class(symbol);
 
-                let prices = stock_market
-                    .fetch_assets_price(assets)
-                    .into_iter()
-                    .filter_map(|asset| asset.ok())
-                    .collect();
-
-                let data = build_data(prices);
-                render_table(data).unwrap();
+        match class {
+            Some(class) => self.portfolio.buy(symbol, class, quantity, price),
+            None => {
+                println!("We could not find {symbol} asset in the stock market.");
+                std::process::exit(1)
             }
         }
+    }
+
+    fn sell(&mut self, symbol: &str, quantity: u32, price: f64) {
+        if let Some(asset) = self.portfolio.stock(symbol) {
+            let profit = quantity as f64 * (price - asset.average_price);
+
+            if self.portfolio.sell(symbol, quantity).is_err() {
+                println!("Your portfolio didn't had enough {symbol} to sell.");
+                std::process::exit(1)
+            } else {
+                println!("You sold {quantity} {symbol} profiting R${profit:10.2}.")
+            };
+        } else {
+            println!("You don't own any {symbol} to sell.");
+            std::process::exit(1)
+        }
+    }
+
+    fn summarize(&self) {
+        let unpriced_assets = self.portfolio.assets();
+        let stock_market = StockMarket::new();
+
+        let priced_assets = stock_market
+            .fetch_assets_price(unpriced_assets)
+            .into_iter()
+            // We are trowing away any asset that we could not fetch the price.
+            .filter_map(|asset| asset.ok())
+            .collect();
+
+        let data = build_data(priced_assets);
+        render_table(data).unwrap();
     }
 }
 
