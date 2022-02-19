@@ -20,8 +20,8 @@ pub struct Data {
     original_cost: f64,
 }
 
-impl Data {
-    fn from_asset(asset: PricedAsset) -> Self {
+impl From<PricedAsset> for Data {
+    fn from(asset: PricedAsset) -> Self {
         let current_value = asset.price * asset.quantity as f64;
         let last_value = asset.last_price * asset.quantity as f64;
         let original_cost = asset.quantity as f64 * asset.average_price;
@@ -43,7 +43,7 @@ impl Data {
 }
 
 pub fn build_data(assets: Vec<PricedAsset>) -> Vec<Data> {
-    assets.into_iter().map(Data::from_asset).collect()
+    assets.into_iter().map(|asset| asset.into()).collect()
 }
 
 pub fn render_table(mut data: Vec<Data>) -> Result<(), Box<dyn Error>> {

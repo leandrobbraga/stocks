@@ -1,20 +1,28 @@
 mod render;
 
-use std::path::Path;
-
+use env_logger::Env;
+use log::{error, info, warn};
 use render::{build_data, render_table};
+use std::path::Path;
 use stocks::{portfolio::Portfolio, stock_market::StockMarket};
 use structopt::StructOpt;
 
 static FILEPATH: &str = "portfolio.json";
 
 fn main() {
+    setup_logger();
+
     let command = Arguments::from_args().command;
     let filepath = Path::new(FILEPATH);
 
     let mut stock = StockCLI::load_portfolio(filepath);
     stock.run_command(command);
     stock.save_portfolio(filepath);
+}
+
+fn setup_logger() {
+    let env = Env::default().filter_or("RUST_LOG", "info");
+    env_logger::init_from_env(env);
 }
 
 struct StockCLI {
@@ -53,29 +61,34 @@ impl StockCLI {
 
     fn buy(&mut self, symbol: &str, quantity: u32, price: f64) {
         let stock_market = StockMarket::new();
-        let class = stock_market.asset_class(symbol);
-
-        match class {
-            Some(class) => self.portfolio.buy(symbol, class, quantity, price),
-            None => {
-                println!("We could not find {symbol} asset in the stock market.");
-                std::process::exit(1)
-            }
+        if let Some(class) = stock_market.asset_class(symbol) {
+            self.portfolio.buy(symbol, class, quantity, price)
+        } else {
+            error!("Currently there is no {symbol} available in the API.");
+            std::process::exit(1)
         }
     }
 
     fn sell(&mut self, symbol: &str, quantity: u32, price: f64) {
-        if let Some(asset) = self.portfolio.stock(symbol) {
+        let symbol = symbol.to_uppercase();
+
+        if let Some(asset) = self.portfolio.stock(&symbol) {
             let profit = quantity as f64 * (price - asset.average_price);
 
-            if self.portfolio.sell(symbol, quantity).is_err() {
-                println!("Your portfolio didn't had enough {symbol} to sell.");
+            if self.portfolio.sell(&symbol, quantity).is_err() {
+                warn!(
+                    "You tried to sell more {symbol} than you currently posses. We could not 
+                execute the desired command."
+                );
                 std::process::exit(1)
             } else {
-                println!("You sold {quantity} {symbol} profiting R${profit:10.2}.")
+                info!("You sold {quantity} {symbol} profiting R${profit:10.2}.")
             };
         } else {
-            println!("You don't own any {symbol} to sell.");
+            warn!(
+                "Currently there is no {symbol} in your portfolio. Because of that we could not 
+            execute the sell command."
+            );
             std::process::exit(1)
         }
     }

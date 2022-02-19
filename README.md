@@ -2,9 +2,9 @@
 Simple stocks management system.
 
 ## Checklist
-- [x] Add and remove stocks
-- [x] Persistence 
-- [x] Summary
+- [X] Add and remove stocks
+- [X] Persistence 
+- [X] Summary
     - [X] Sort before displaying
     - [X] Separate FII from Stocks
 - [X] Fetch prices from the stock market
@@ -18,8 +18,8 @@ Simple stocks management system.
 - [X] Beautify outputs
 - [X] Add average price
     - [X] Add current profit in summary
+- [X] Logging
 - [ ] Log every profit/loss for tax pay
 - [ ] Improve error handling
 - [ ] Testing
-- [ ] Logging
 - [ ] Documentation
