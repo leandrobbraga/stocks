@@ -4,46 +4,19 @@ use cli_table::{
     format::{Border, Justify, Separator},
     print_stdout, Cell, CellStruct, Color, Style, Table,
 };
-use stocks::portfolio::PricedAsset;
 
 pub struct Data {
-    name: String,
-    quantity: u32,
-    current_price: f64,
-    current_value: f64,
-    change: f64,
-    change_percentage: f64,
-    average_price: f64,
-    profit: f64,
-    profit_percentage: f64,
-    last_value: f64,
-    original_cost: f64,
-}
-
-impl From<PricedAsset> for Data {
-    fn from(asset: PricedAsset) -> Self {
-        let current_value = asset.price * asset.quantity as f64;
-        let last_value = asset.last_price * asset.quantity as f64;
-        let original_cost = asset.quantity as f64 * asset.average_price;
-
-        Self {
-            name: asset.name,
-            quantity: asset.quantity,
-            current_price: asset.price,
-            current_value,
-            change: current_value - last_value,
-            change_percentage: (current_value / last_value - 1.0) * 100.0,
-            average_price: asset.average_price,
-            profit: current_value - original_cost,
-            profit_percentage: (current_value / original_cost - 1.0) * 100.0,
-            last_value,
-            original_cost,
-        }
-    }
-}
-
-pub fn build_data(assets: Vec<PricedAsset>) -> Vec<Data> {
-    assets.into_iter().map(|asset| asset.into()).collect()
+    pub name: String,
+    pub quantity: u32,
+    pub current_price: f64,
+    pub current_value: f64,
+    pub change: f64,
+    pub change_percentage: f64,
+    pub average_price: f64,
+    pub profit: f64,
+    pub profit_percentage: f64,
+    pub last_value: f64,
+    pub original_cost: f64,
 }
 
 pub fn render_table(mut data: Vec<Data>) -> Result<(), Box<dyn Error>> {
