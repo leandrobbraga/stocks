@@ -21,5 +21,6 @@ Simple stocks management system.
 - [X] Logging
 - [ ] Log every profit/loss for tax pay
 - [ ] Improve error handling
+- [ ] Improve portfolio persistence
 - [ ] Testing
 - [ ] Documentation

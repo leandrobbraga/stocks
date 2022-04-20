@@ -83,7 +83,7 @@ impl App {
             .fetch_assets_price(unpriced_assets)
             .into_iter()
             // We are trowing away any asset that we could not fetch the price.
-            .filter_map(|asset| asset.ok())
+            .filter_map(|maybe_asset| maybe_asset.ok())
             .map(|priced_asset| priced_asset.into())
             .collect();
 

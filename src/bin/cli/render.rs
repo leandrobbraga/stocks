@@ -100,7 +100,8 @@ fn format_totals(data: &[Data]) -> Vec<CellStruct> {
         format!("R$ {change:10.2}")
             .cell()
             .justify(Justify::Right)
-            .foreground_color(change_color),
+            .foreground_color(change_color)
+            .bold(true),
         format!("{:6.2}%", (change / last_value) * 100.0)
             .cell()
             .justify(Justify::Right)
@@ -110,12 +111,13 @@ fn format_totals(data: &[Data]) -> Vec<CellStruct> {
         format!("R$ {:10.2}", profit)
             .cell()
             .justify(Justify::Right)
-            .foreground_color(profit_color),
+            .foreground_color(profit_color)
+            .bold(true),
         format!("{:6.2}%", (profit / original_cost) * 100.0)
             .cell()
             .justify(Justify::Right)
-            .bold(true)
-            .foreground_color(profit_color),
+            .foreground_color(profit_color)
+            .bold(true),
     ]
 }
 
