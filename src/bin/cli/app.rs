@@ -5,7 +5,6 @@ use stocks::{
     portfolio::{Portfolio, PricedAsset},
     stock_market::StockMarket,
 };
-use structopt::StructOpt;
 
 pub struct App {
     portfolio: Portfolio,
@@ -25,23 +24,7 @@ impl App {
         self.portfolio.to_file(filepath).unwrap();
     }
 
-    pub fn run_command(&mut self, command: Command) {
-        match command {
-            Command::Buy {
-                symbol,
-                quantity,
-                price,
-            } => self.buy(&symbol, quantity, price),
-            Command::Sell {
-                symbol,
-                quantity,
-                price,
-            } => self.sell(&symbol, quantity, price),
-            Command::Summary => self.summarize(),
-        }
-    }
-
-    fn buy(&mut self, symbol: &str, quantity: u32, price: f64) {
+    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64) {
         let stock_market = StockMarket::new();
         if let Some(class) = stock_market.asset_class(symbol) {
             self.portfolio.buy(symbol, class, quantity, price)
@@ -51,7 +34,7 @@ impl App {
         }
     }
 
-    fn sell(&mut self, symbol: &str, quantity: u32, price: f64) {
+    pub fn sell(&mut self, symbol: &str, quantity: u32, price: f64) {
         let symbol = symbol.to_uppercase();
 
         if let Some(asset) = self.portfolio.stock(&symbol) {
@@ -75,7 +58,7 @@ impl App {
         }
     }
 
-    fn summarize(&self) {
+    pub fn summarize(&self) {
         let unpriced_assets = self.portfolio.assets();
         let stock_market = StockMarket::new();
 
@@ -111,37 +94,4 @@ impl From<PricedAsset> for Data {
             original_cost,
         }
     }
-}
-
-#[derive(Debug, StructOpt)]
-pub enum Command {
-    #[structopt(about = "Buy an asset.")]
-    Buy {
-        #[structopt(name = "SYMBOL", help = "The asset ticker (e.g. BBAS3).")]
-        symbol: String,
-        #[structopt(
-            name = "QUANTITY",
-            help = "How much it is going to be bought (e.g. 100)."
-        )]
-        quantity: u32,
-        #[structopt(
-            name = "PRICE",
-            help = "The price which the asset was bought (e.g. 10.0)."
-        )]
-        price: f64,
-    },
-    #[structopt(about = "Sell an asset.")]
-    Sell {
-        #[structopt(name = "SYMBOL", help = "The asset ticker (e.g. BBAS3).")]
-        symbol: String,
-        #[structopt(name = "VALUE", help = "How much it is going to be sold (e.g. 100).")]
-        quantity: u32,
-        #[structopt(
-            name = "PRICE",
-            help = "The price which the asset was sold (e.g. 10.0)."
-        )]
-        price: f64,
-    },
-    #[structopt(about = "Summarizes the current portfolio.")]
-    Summary,
 }

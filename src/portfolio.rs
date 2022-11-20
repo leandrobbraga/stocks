@@ -60,14 +60,14 @@ impl Portfolio {
 
     pub fn sell(&mut self, symbol: &str, quantity: u32) -> Result<(), NotEnoughAssetToSell> {
         if let Some(entry) = self.assets.get_mut(&symbol.to_uppercase()) {
-            match (*entry).quantity.cmp(&quantity) {
+            match entry.quantity.cmp(&quantity) {
                 std::cmp::Ordering::Less => Err(NotEnoughAssetToSell),
                 std::cmp::Ordering::Equal => {
                     self.assets.remove(symbol);
                     Ok(())
                 }
                 std::cmp::Ordering::Greater => {
-                    (*entry).quantity -= quantity;
+                    entry.quantity -= quantity;
                     Ok(())
                 }
             }
