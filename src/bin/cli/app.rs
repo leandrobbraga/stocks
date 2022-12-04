@@ -85,12 +85,9 @@ impl App {
             }
         }
 
-        match render_summary(data) {
-            Ok(table) => println!("{:?}", table),
-            Err(e) => {
-                error!("Could not render table: {e:?}", e = e);
-                std::process::exit(1)
-            }
+        if let Err(e) = render_summary(data) {
+            error!("Could not render table: {e:?}", e = e);
+            std::process::exit(1)
         };
 
         Ok(())
@@ -108,12 +105,9 @@ impl App {
             })
         }
 
-        match render_profit_by_month(data) {
-            Ok(table) => println!("{:?}", table),
-            Err(e) => {
-                error!("Could not render table: {e:?}", e = e);
-                std::process::exit(1)
-            }
+        if let Err(e) = render_profit_by_month(data) {
+            error!("Could not render table: {e:?}", e = e);
+            std::process::exit(1)
         };
     }
 }
