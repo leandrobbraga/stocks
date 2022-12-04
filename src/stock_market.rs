@@ -1,81 +1,97 @@
-use rayon::prelude::*;
+use super::portfolio::Stock;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
+use tokio::task::JoinHandle;
 
-use crate::portfolio::{AssetClass, PriceInfo, PricedAsset, UnpricedAsset};
+const API_URL: &str = "https://mfinance.com.br/api/v1/stocks/";
 
-static API_URL: &str = "https://mfinance.com.br/api/v1";
-
+/// Represents the stock market, it's responsible for fetching real stock information.
 #[derive(Default)]
 pub struct StockMarket {
-    client: reqwest::blocking::Client,
+    client: reqwest::Client,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PricedStock {
+    pub symbol: String,
+    pub quantity: u32,
+    pub average_price: f64,
+    pub price: f64,
+    pub last_price: f64,
+}
+
+/// The complete response from the MFinance API.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub struct MFinanceResponse {
+    pub change: f64,
+    pub closing_price: f64,
+    pub eps: f64,
+    pub high: f64,
+    pub last_price: f64,
+    pub last_year_high: f64,
+    pub last_year_low: f64,
+    pub low: f64,
+    pub market_cap: f64,
+    pub name: String,
+    pub pe: f64,
+    pub price_open: f64,
+    pub sector: String,
+    pub segment: String,
+    pub shares: f64,
+    pub sub_sector: String,
+    pub symbol: String,
+    pub volume: f64,
+    pub volume_avg: f64,
 }
 
 impl StockMarket {
     pub fn new() -> Self {
-        StockMarket {
-            client: reqwest::blocking::Client::new(),
+        Self {
+            client: reqwest::Client::new(),
         }
     }
 
-    pub fn fetch_asset_price(&self, asset: UnpricedAsset) -> Result<PricedAsset, reqwest::Error> {
-        let api = match asset.class {
-            AssetClass::FII => "fiis",
-            AssetClass::Stock => "stocks",
-        };
-        let price_info: PriceInfo = self
-            .client
-            .get(format!("{API_URL}/{api}/{}", asset.name.to_lowercase()))
-            .send()?
-            .json()?;
+    /// Given a slice of stocks, fetches current information about them from the stock market.
+    pub async fn get_stock_prices(&self, stocks: &[&Stock]) -> Result<Vec<Result<PricedStock>>> {
+        let mut handles: Vec<JoinHandle<Result<PricedStock>>> = Vec::with_capacity(stocks.len());
 
-        Ok(PricedAsset {
-            name: asset.name,
-            class: asset.class,
-            quantity: asset.quantity,
-            average_price: asset.average_price,
-            price: price_info.price,
-            last_price: price_info.last_price,
+        for stock in stocks {
+            let handle = tokio::spawn(StockMarket::get_stock_price(
+                self.client.clone(),
+                stock.symbol.to_string(),
+                stock.quantity,
+                stock.average_purchase_price,
+            ));
+
+            handles.push(handle);
+        }
+
+        let mut results = Vec::with_capacity(stocks.len());
+        for handle in handles {
+            results.push(handle.await?);
+        }
+
+        Ok(results)
+    }
+
+    /// Fetches current information about a stock from the stock market.
+    async fn get_stock_price(
+        client: reqwest::Client,
+        symbol: String,
+        quantity: u32,
+        average_price: f64,
+    ) -> Result<PricedStock> {
+        let response = client.get(format!("{API_URL}/{symbol}")).send().await?;
+        let response: MFinanceResponse = response.json().await?;
+        Ok(PricedStock {
+            symbol,
+            quantity,
+            average_price,
+            price: response.last_price,
+            last_price: response.closing_price,
         })
-    }
-
-    pub fn fetch_assets_price(
-        &self,
-        assets: Vec<UnpricedAsset>,
-    ) -> Vec<Result<PricedAsset, reqwest::Error>> {
-        assets
-            .into_par_iter()
-            .map(|asset| self.fetch_asset_price(asset))
-            .collect()
-    }
-
-    pub fn asset_class(&self, asset: &str) -> Option<AssetClass> {
-        let apis = ["fiis", "stocks"];
-
-        let result: Vec<bool> = apis
-            .into_par_iter()
-            .map(|api| {
-                if let Ok(list) = self.asset_list(api) {
-                    list.contains(&asset.to_uppercase())
-                } else {
-                    false
-                }
-            })
-            .collect();
-
-        // Rayon maintains the original order
-        match result[..] {
-            [true, false] => Some(AssetClass::FII),
-            [false, true] => Some(AssetClass::Stock),
-            _ => None,
-        }
-    }
-
-    fn asset_list(&self, api: &str) -> Result<Vec<String>, reqwest::Error> {
-        let result: Vec<String> = self
-            .client
-            .get(format!("{API_URL}/{api}/symbols/"))
-            .send()?
-            .json()?;
-
-        Ok(result)
     }
 }

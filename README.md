@@ -1,26 +1,55 @@
 # Stocks
+
 Simple stocks management system.
 
-## Checklist
-- [X] Add and remove stocks
-- [X] Persistence 
-- [X] Summary
-    - [X] Sort before displaying
-    - [X] Separate FII from Stocks
-- [X] Fetch prices from the stock market
-    - [X] Deal with Stocks
-    - [X] Deal with FII
-    - [ ] Deal with ETF
-- [X] Track portfolio performance
-- [X] Create StockMarket namespace
-- [X] Check before adding any asset to the portfolio
-    - [X] Add information about the Asset (FII or Stock)
-- [X] Beautify outputs
-- [X] Add average price
-    - [X] Add current profit in summary
-- [X] Logging
-- [ ] Log every profit/loss for tax pay
-- [ ] Improve error handling
-- [ ] Improve portfolio persistence
-- [ ] Testing
-- [ ] Documentation
+![An image of the stocks' summarize function](resources/summary.png)
+
+## Prerequisites
+
+- [Rust](https://www.rust-lang.org/tools/install)
+
+## Usage Example
+
+### Purchasing stocks
+
+```shell
+cargo run -- buy BBAS3 100 34.50 2022-12-01
+[2022-12-03T22:48:09Z INFO  cli::app] You bought 100 BBAS3 at R$     34.50.
+```
+
+### Summarizing current position
+
+```shell
+cargo run -- summary
+> Name  Quantity  Current Price Current Value Change (Day)  % Change (Day)  Average Price Profit    % Profit 
+> BBAS3 100  R$   36.03         R$ 3603.00    R$ 0.00       0.00%           R$ 34.50      R$ 151.00 4,43% 
+```
+
+### Selling stocks
+
+```shell
+cargo run -- sell BBAS3 100 36.03 2022-12-01
+> [2022-12-03T22:48:09Z INFO  cli::app] You sold 100 BBAS3 profiting R$    151.00.
+```
+
+### Summarizing the profits in a year
+
+This command calculates the portfolio profit for every month in a given year.
+
+```shell
+cargo run -- profit--summary 2022
+> Month     Profit     
+> 1      R$     170.00 
+> 2      R$      81.00 
+> 3      R$    2472.00 
+> 4      R$    3333.00 
+> 5      R$    4214.00 
+> 6      R$     455.20 
+> 7      R$       0.00 
+> 8      R$     540.00 
+> 9      R$       0.00 
+> 10     R$   -1178.65 
+> 11     R$   -6924.35 
+> 12     R$       0.00 
+> Total  R$    3162.21 
+```
