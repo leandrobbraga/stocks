@@ -13,8 +13,18 @@ Simple stocks management system.
 ### Purchasing stocks
 
 ```shell
-cargo run -- buy BBAS3 100 34.50 2022-12-01
+cargo run -- buy BBAS3 100 34.50
 [2022-12-03T22:48:09Z INFO  cli::app] You bought 100 BBAS3 at R$     34.50.
+```
+
+It is also possible to define an optional previous date, but the program will only accept trades
+that are more recent that the newest trade in the specific stock's trade history. Otherwise, it
+would miscalculate the profit/loss for the trade. That's because the current implementation does not
+recalculate the `average_purchase_price` in retrospect.
+
+```shell
+cargo run -- buy ITSA3 100 10.12 2022-01-01
+[2022-12-03T22:48:09Z INFO  cli::app] You bought 100 ITSA3 at R$     10.12.
 ```
 
 ### Summarizing current position
@@ -28,7 +38,7 @@ cargo run -- summary
 ### Selling stocks
 
 ```shell
-cargo run -- sell BBAS3 100 36.03 2022-12-01
+cargo run -- sell BBAS3 100 36.03
 > [2022-12-03T22:48:09Z INFO  cli::app] You sold 100 BBAS3 profiting R$    151.00.
 ```
 
