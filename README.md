@@ -1,8 +1,17 @@
 # Stocks
 
-Simple stocks management system.
+`Stocks` facilitates the monitoring of the portfolio directly from the terminal. With the `summary`
+command it is possible to visualize the daily valuation of the stocks and also the valuation in
+relation to the average price.
 
-![An image of the stocks' summarize function](resources/summary.png)
+![Contains the `summary` command output, a table with the data for each owned stock](resources/summary.png)
+
+It is also possible to calculate how much profit/loss was month by month for a specified year with
+the command `profit-summary`.
+
+![Contains the `profit-summary` command output, a table with the profit for each month of a given year](resources/profit-summary.png)
+
+**The current implementation is aimed to stocks listed in the Brazilian market (Bovespa).**
 
 ## Prerequisites
 
