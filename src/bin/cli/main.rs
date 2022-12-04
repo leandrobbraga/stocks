@@ -28,6 +28,7 @@ pub enum Command {
         /// How much was the average cost of the purchase (e.g. 33.21)
         price: f64,
         #[clap(value_parser=parse_date)]
+        #[arg(default_value_t = chrono::Local::now().date_naive())]
         date: NaiveDate,
     },
     /// Sells an asset
@@ -39,6 +40,7 @@ pub enum Command {
         /// How much was the average cost of the sell (e.g. 33.21)
         price: f64,
         #[clap(value_parser=parse_date)]
+        #[arg(default_value_t = chrono::Local::now().date_naive())]
         date: NaiveDate,
     },
     /// Print a summary of the portfolio
