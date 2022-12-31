@@ -99,10 +99,17 @@ impl App {
         let mut data = Vec::with_capacity(12);
 
         for (month, summary) in profit_by_month.iter().enumerate() {
+            let tax = if summary.sold_amount > 20000.0 && summary.profit > 0.0 {
+                summary.profit * 0.15
+            } else {
+                0.0
+            };
+
             data.push(ProfitSummaryData {
                 month: month as u8,
                 sold_amount: summary.sold_amount,
                 profit: summary.profit,
+                tax,
             })
         }
 
