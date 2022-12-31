@@ -39,6 +39,12 @@ pub enum TradeError {
     OutOfOrderTrade,
 }
 
+#[derive(Default, Debug, Clone)]
+pub struct MonthSummary {
+    pub profit: f64,
+    pub sold_amount: f64,
+}
+
 impl Portfolio {
     pub fn new() -> Self {
         Self {
@@ -90,17 +96,15 @@ impl Portfolio {
         Ok(profit)
     }
 
-    pub fn stocks(&self) -> Vec<&Stock> {
-        self.stocks.values().collect()
-    }
+    pub fn profit_by_month(&self, year: i32) -> Vec<MonthSummary> {
+        let mut profit_by_month = vec![MonthSummary::default(); 12];
 
-    pub fn profit_by_month(&self, year: i32) -> Vec<f64> {
-        let mut profit_by_month = vec![0.0; 12];
-
-        for stock in self.stocks() {
+        for stock in self.stocks.values() {
             let stock_profit_by_month = stock.get_profit_by_month(year);
-            for (i, profit) in stock_profit_by_month.iter().enumerate() {
-                profit_by_month[i] += profit;
+
+            for (month, summary) in stock_profit_by_month.iter().enumerate() {
+                profit_by_month[month].profit += summary.profit;
+                profit_by_month[month].sold_amount += summary.sold_amount;
             }
         }
 
@@ -161,13 +165,22 @@ impl Stock {
         Ok(profit)
     }
 
-    pub fn get_profit_by_month(&self, year: i32) -> Vec<f64> {
-        let mut profit_by_month = vec![0.0; 12];
+    pub fn get_profit_by_month(&self, year: i32) -> Vec<MonthSummary> {
+        let mut profit_by_month = vec![MonthSummary::default(); 12];
 
         for trade in &self.trades {
-            if trade.date.year() == year {
-                profit_by_month[trade.date.month() as usize - 1] += trade.profit;
+            if trade.kind != TradeKind::Sell {
+                continue;
             }
+
+            if trade.date.year() != year {
+                continue;
+            }
+
+            let month = trade.date.month() as usize - 1;
+
+            profit_by_month[month].sold_amount += trade.price * trade.quantity as f64;
+            profit_by_month[month].profit += trade.profit;
         }
 
         profit_by_month

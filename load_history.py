@@ -23,7 +23,7 @@ def load_history() -> list:
             if i == 0:
                 continue
             
-            symbol, date, kind, quantity, price, _ = line.split(";")
+            symbol, date, kind, quantity, price = line.split(";")
             history.append(
                 {
                     "symbol": symbol,

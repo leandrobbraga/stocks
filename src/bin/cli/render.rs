@@ -22,6 +22,7 @@ pub struct SummaryData {
 pub struct ProfitSummaryData {
     pub month: u8,
     pub profit: f64,
+    pub sold_amount: f64,
 }
 
 pub fn render_summary(mut data: Vec<SummaryData>) -> Result<()> {
@@ -142,6 +143,7 @@ pub fn render_profit_by_month(data: Vec<ProfitSummaryData>) -> Result<()> {
         .table()
         .title(vec![
             "Month".cell().bold(true).justify(Justify::Left),
+            "Sold Amount".cell().bold(true).justify(Justify::Center),
             "Profit".cell().bold(true).justify(Justify::Center),
         ])
         .separator(Separator::builder().build())
@@ -155,6 +157,9 @@ fn format_profit_summary_row(data: &ProfitSummaryData) -> Vec<CellStruct> {
 
     vec![
         (data.month + 1).cell().justify(Justify::Left),
+        format!("R$ {:10.2}", data.sold_amount)
+            .cell()
+            .justify(Justify::Right),
         format!("R$ {:10.2}", data.profit)
             .cell()
             .justify(Justify::Right)
@@ -164,11 +169,16 @@ fn format_profit_summary_row(data: &ProfitSummaryData) -> Vec<CellStruct> {
 
 fn format_profit_summary_totals(data: &[ProfitSummaryData]) -> Vec<CellStruct> {
     let profit_total: f64 = data.iter().map(|data| data.profit).sum();
+    let sold_amount_total: f64 = data.iter().map(|data| data.sold_amount).sum();
 
     let profit_color = get_color(profit_total);
 
     vec![
         "Total".cell().justify(Justify::Left).bold(true),
+        format!("R$ {:10.2}", sold_amount_total)
+            .cell()
+            .justify(Justify::Right)
+            .bold(true),
         format!("R$ {:10.2}", profit_total)
             .cell()
             .justify(Justify::Right)

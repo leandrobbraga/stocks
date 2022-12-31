@@ -5,4 +5,10 @@ Cargo.lock
 .vscode
 
 # locally saved portfolio
-/portfolio.json
+*.json
+
+# local stock history
+history.csv
+
+# python files
+*.pyc

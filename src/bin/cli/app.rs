@@ -68,8 +68,8 @@ impl App {
     pub async fn summarize(&self) -> Result<()> {
         let stocks: Vec<&Stock> = self
             .portfolio
-            .stocks()
-            .into_iter()
+            .stocks
+            .values()
             .filter(|stock| stock.quantity > 0)
             .collect();
 
@@ -98,10 +98,11 @@ impl App {
 
         let mut data = Vec::with_capacity(12);
 
-        for (month, profit) in profit_by_month.iter().enumerate() {
+        for (month, summary) in profit_by_month.iter().enumerate() {
             data.push(ProfitSummaryData {
                 month: month as u8,
-                profit: *profit,
+                sold_amount: summary.sold_amount,
+                profit: summary.profit,
             })
         }
 
