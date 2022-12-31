@@ -62,8 +62,8 @@ impl StockMarket {
             let handle = tokio::spawn(StockMarket::get_stock_price(
                 self.client.clone(),
                 stock.symbol.to_string(),
-                stock.quantity,
-                stock.average_purchase_price,
+                stock.quantity(),
+                stock.average_purchase_price(),
             ));
 
             handles.push(handle);

@@ -13,8 +13,6 @@ pub struct Portfolio {
 #[derive(Default, Serialize, Deserialize)]
 pub struct Stock {
     pub symbol: String,
-    pub quantity: u32,
-    pub average_purchase_price: f64,
     pub trades: Vec<Trade>,
 }
 
@@ -119,6 +117,44 @@ impl Stock {
             ..Default::default()
         }
     }
+    /// Dynamically calculate the total quantity of the stock.
+    pub fn quantity(&self) -> u32 {
+        let mut quantity = 0;
+
+        for trade in &self.trades {
+            if trade.kind == TradeKind::Buy {
+                quantity += trade.quantity;
+            } else {
+                quantity -= trade.quantity;
+            }
+        }
+
+        quantity
+    }
+
+    /// Dynamically calculate the average purchase price of the stock.
+    pub fn average_purchase_price(&self) -> f64 {
+        let mut quantity = 0;
+        let mut average_purchase_price = 0.0;
+
+        for trade in &self.trades {
+            if trade.kind == TradeKind::Buy {
+                average_purchase_price = ((average_purchase_price * quantity as f64)
+                    + (trade.price * trade.quantity as f64))
+                    / (quantity + trade.quantity) as f64;
+                quantity += trade.quantity;
+            } else {
+                quantity -= trade.quantity;
+                if quantity == 0 {
+                    // When the total quantity is 0, we have sold all the shares, which mean we need
+                    // to reset the average_purchase_price back to 0.
+                    average_purchase_price = 0.0;
+                }
+            }
+        }
+
+        average_purchase_price
+    }
 
     pub fn buy(&mut self, quantity: u32, price: f64, date: NaiveDate) -> Result<(), TradeError> {
         let trade = Trade {
@@ -129,22 +165,17 @@ impl Stock {
             profit: 0.0,
         };
 
-        self.add_trade(trade)?;
-
-        self.average_purchase_price = ((self.average_purchase_price * self.quantity as f64)
-            + (price * quantity as f64))
-            / (self.quantity + quantity) as f64;
-        self.quantity += quantity;
+        self.add_trade(trade);
 
         Ok(())
     }
 
     pub fn sell(&mut self, quantity: u32, price: f64, date: NaiveDate) -> Result<f64, TradeError> {
-        if quantity > self.quantity {
+        if quantity > self.quantity() {
             return Err(TradeError::NotEnoughShares);
         }
 
-        let profit = (price - self.average_purchase_price) * quantity as f64;
+        let profit = (price - self.average_purchase_price()) * quantity as f64;
 
         let trade = Trade {
             quantity,
@@ -154,13 +185,7 @@ impl Stock {
             profit,
         };
 
-        self.add_trade(trade)?;
-
-        self.quantity -= quantity;
-
-        if self.quantity == 0 {
-            self.average_purchase_price = 0.0;
-        }
+        self.add_trade(trade);
 
         Ok(profit)
     }
@@ -186,18 +211,11 @@ impl Stock {
         profit_by_month
     }
 
-    fn add_trade(&mut self, trade: Trade) -> Result<(), TradeError> {
-        // Ensure this trade has the most recent date from the whole trade history
-        let last_date = self.trades.iter().map(|trade| trade.date).max();
-
-        if let Some(last_date) = last_date {
-            if trade.date < last_date {
-                return Err(TradeError::OutOfOrderTrade);
-            }
-        }
-
+    fn add_trade(&mut self, trade: Trade) {
         self.trades.push(trade);
 
-        Ok(())
+        // We ensure that the trades are sorted by date so that we can iterate over all the trades
+        // in chronological order.
+        self.trades.sort_by(|a, b| a.date.cmp(&b.date));
     }
 }

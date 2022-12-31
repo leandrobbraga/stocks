@@ -70,7 +70,7 @@ impl App {
             .portfolio
             .stocks
             .values()
-            .filter(|stock| stock.quantity > 0)
+            .filter(|stock| stock.quantity() > 0)
             .collect();
 
         let priced_stocks = self.stock_market.get_stock_prices(&stocks).await?;
