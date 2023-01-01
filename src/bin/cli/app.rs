@@ -66,7 +66,7 @@ impl App {
     }
 
     pub async fn summarize(&self, date: NaiveDate) -> Result<()> {
-        let date = date.and_hms_opt(0, 0, 0).unwrap();
+        let date = date.and_hms_opt(23, 59, 59).unwrap();
 
         let stocks: Vec<&Stock> = self
             .portfolio

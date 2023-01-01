@@ -46,7 +46,7 @@ pub enum Command {
     /// Print a summary of the portfolio
     Summary {
         /// The reference date of the output summary (e.g. 2020-12-31 means that the summary will
-        /// show all the assets in the portfolio as of 2020-12-31)
+        /// show all the assets in the portfolio as of 2020-12-31, inclusive)
         #[clap(value_parser=parse_date)]
         #[arg(default_value_t = chrono::Local::now().date_naive())]
         date: NaiveDate,
