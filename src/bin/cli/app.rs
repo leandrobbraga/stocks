@@ -1,5 +1,5 @@
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use chrono::{NaiveDate, NaiveDateTime};
 use log::{error, info, warn};
 use stocks::{
@@ -65,12 +65,8 @@ impl App {
         }
     }
 
-    pub async fn summarize(&self, year: u16) -> Result<()> {
-        // The first day of the next year using the chrono lib
-        let date = NaiveDate::from_ymd_opt(year as i32 + 1, 1, 1)
-            .context("Invalid year")?
-            .and_hms_opt(0, 0, 0)
-            .context("Invalid time")?;
+    pub async fn summarize(&self, date: NaiveDate) -> Result<()> {
+        let date = date.and_hms_opt(0, 0, 0).unwrap();
 
         let stocks: Vec<&Stock> = self
             .portfolio

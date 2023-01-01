@@ -3,7 +3,7 @@ mod render;
 
 use anyhow::Result;
 use app::App;
-use chrono::{Datelike, NaiveDateTime};
+use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 use log::{error, info, warn};
@@ -39,14 +39,17 @@ pub enum Command {
         quantity: u32,
         /// How much was the average cost of the sell (e.g. 33.21)
         price: f64,
-        #[clap(value_parser=parse_date)]
+        #[clap(value_parser=parse_datetime)]
         #[arg(default_value_t = chrono::Local::now().naive_local())]
         date: NaiveDateTime,
     },
     /// Print a summary of the portfolio
     Summary {
-        #[arg(default_value_t = chrono::Local::now().date_naive().year())]
-        year: i32,
+        /// The reference date of the output summary (e.g. 2020-12-31 means that the summary will
+        /// show all the assets in the portfolio as of 2020-12-31)
+        #[clap(value_parser=parse_date)]
+        #[arg(default_value_t = chrono::Local::now().date_naive())]
+        date: NaiveDate,
     },
     ProfitSummary {
         #[arg(default_value_t = chrono::Local::now().date_naive().year())]
@@ -89,10 +92,8 @@ async fn main() -> Result<()> {
         } => {
             app.sell(&symbol.to_uppercase(), quantity, price, date);
         }
-        Command::Summary { year } => {
-            let year = u16::try_from(year)?;
-
-            match app.summarize(year).await {
+        Command::Summary { date } => {
+            match app.summarize(date).await {
                 Ok(_) => (),
                 Err(e) => {
                     error!("Could not summarize portfolio: {e:?}", e = e);
@@ -114,6 +115,10 @@ fn setup_logger() {
     env_logger::init_from_env(env);
 }
 
-fn parse_date(arg: &str) -> Result<NaiveDateTime> {
+fn parse_datetime(arg: &str) -> Result<NaiveDateTime> {
     Ok(NaiveDateTime::parse_from_str(arg, "%Y-%m-%d %H:%M:%S")?)
+}
+
+fn parse_date(arg: &str) -> Result<NaiveDate> {
+    Ok(NaiveDate::parse_from_str(arg, "%Y-%m-%d")?)
 }

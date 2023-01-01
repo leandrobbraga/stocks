@@ -41,12 +41,15 @@ cargo run -- summary
 > BBAS3 100  R$   36.03         R$ 3603.00    R$ 0.00       0.00%           R$ 34.50      R$ 151.00 4,43% 
 ```
 
-It is also possible to see the summary for a specific year. This is useful for calculating end of
-year position for tax purposes.
+It is also possible to see the summary for a specific reference date. This is useful for calculating
+end of year position for tax purposes.
 
 ```shell
-cargo run -- summary 2022
+cargo run -- summary 2022-12-31
 ```
+
+NOTE: Be careful when using this command, as the `Current Price` will not be the reference date
+price, but the actual current price.
 
 ### Selling stocks
 
