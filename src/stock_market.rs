@@ -1,5 +1,6 @@
 use super::portfolio::Stock;
 use anyhow::Result;
+use chrono::NaiveDateTime;
 use serde::Deserialize;
 use serde::Serialize;
 use tokio::task::JoinHandle;
@@ -55,16 +56,19 @@ impl StockMarket {
     }
 
     /// Given a slice of stocks, fetches current information about them from the stock market.
-    pub async fn get_stock_prices(&self, stocks: &[&Stock]) -> Result<Vec<Result<PricedStock>>> {
+    pub async fn get_stock_prices(
+        &self,
+        stocks: &[&Stock],
+        date: NaiveDateTime,
+    ) -> Result<Vec<Result<PricedStock>>> {
         let mut handles: Vec<JoinHandle<Result<PricedStock>>> = Vec::with_capacity(stocks.len());
-        let now = chrono::offset::Local::now().naive_local();
 
         for stock in stocks {
             let handle = tokio::spawn(StockMarket::get_stock_price(
                 self.client.clone(),
                 stock.symbol.to_string(),
-                stock.quantity(now),
-                stock.average_purchase_price(now),
+                stock.quantity(date),
+                stock.average_purchase_price(date),
             ));
 
             handles.push(handle);

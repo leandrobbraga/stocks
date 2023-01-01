@@ -1,6 +1,6 @@
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
-use anyhow::Result;
-use chrono::NaiveDateTime;
+use anyhow::{Context, Result};
+use chrono::{NaiveDate, NaiveDateTime};
 use log::{error, info, warn};
 use stocks::{
     portfolio::{Portfolio, Stock},
@@ -65,17 +65,21 @@ impl App {
         }
     }
 
-    pub async fn summarize(&self) -> Result<()> {
-        let now = chrono::Local::now().naive_local();
+    pub async fn summarize(&self, year: u16) -> Result<()> {
+        // The first day of the next year using the chrono lib
+        let date = NaiveDate::from_ymd_opt(year as i32 + 1, 1, 1)
+            .context("Invalid year")?
+            .and_hms_opt(0, 0, 0)
+            .context("Invalid time")?;
 
         let stocks: Vec<&Stock> = self
             .portfolio
             .stocks
             .values()
-            .filter(|stock| stock.quantity(now) > 0)
+            .filter(|stock| stock.quantity(date) > 0)
             .collect();
 
-        let priced_stocks = self.stock_market.get_stock_prices(&stocks).await?;
+        let priced_stocks = self.stock_market.get_stock_prices(&stocks, date).await?;
 
         let mut data = Vec::with_capacity(priced_stocks.len());
         for priced_stock in priced_stocks {

@@ -3,7 +3,7 @@ mod render;
 
 use anyhow::Result;
 use app::App;
-use chrono::NaiveDateTime;
+use chrono::{Datelike, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 use log::{error, info, warn};
@@ -44,9 +44,13 @@ pub enum Command {
         date: NaiveDateTime,
     },
     /// Print a summary of the portfolio
-    Summary,
+    Summary {
+        #[arg(default_value_t = chrono::Local::now().date_naive().year())]
+        year: i32,
+    },
     ProfitSummary {
-        year: u16,
+        #[arg(default_value_t = chrono::Local::now().date_naive().year())]
+        year: i32,
     },
 }
 
@@ -85,14 +89,19 @@ async fn main() -> Result<()> {
         } => {
             app.sell(&symbol.to_uppercase(), quantity, price, date);
         }
-        Command::Summary => match app.summarize().await {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Could not summarize portfolio: {e:?}", e = e);
-                std::process::exit(1)
-            }
-        },
+        Command::Summary { year } => {
+            let year = u16::try_from(year)?;
+
+            match app.summarize(year).await {
+                Ok(_) => (),
+                Err(e) => {
+                    error!("Could not summarize portfolio: {e:?}", e = e);
+                    std::process::exit(1)
+                }
+            };
+        }
         Command::ProfitSummary { year } => {
+            let year = u16::try_from(year)?;
             app.profit_summary(year);
         }
     };

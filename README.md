@@ -11,7 +11,7 @@ the command `profit-summary`.
 
 ![Contains the `profit-summary` command output, a table with the profit for each month of a given year](resources/profit-summary.png)
 
-**The current implementation is aimed to stocks listed in the Brazilian market (Bovespa).**
+**The current implementation is aimed to stocks listed in the Brazilian market (BOVESPA).**
 
 ## Prerequisites
 
@@ -26,13 +26,10 @@ cargo run -- buy BBAS3 100 34.50
 [2022-12-03T22:48:09Z INFO  cli::app] You bought 100 BBAS3 at R$     34.50.
 ```
 
-It is also possible to define an optional previous date, but the program will only accept trades
-that are more recent that the newest trade in the specific stock's trade history. Otherwise, it
-would miscalculate the profit/loss for the trade. That's because the current implementation does not
-recalculate the `average_purchase_price` in retrospect.
+It is also possible to define an optional previous date.
 
 ```shell
-cargo run -- buy ITSA3 100 10.12 2022-01-01
+cargo run -- buy ITSA3 100 10.12 2022-01-01 10:00:00
 [2022-12-03T22:48:09Z INFO  cli::app] You bought 100 ITSA3 at R$     10.12.
 ```
 
@@ -42,6 +39,13 @@ cargo run -- buy ITSA3 100 10.12 2022-01-01
 cargo run -- summary
 > Name  Quantity  Current Price Current Value Change (Day)  % Change (Day)  Average Price Profit    % Profit 
 > BBAS3 100  R$   36.03         R$ 3603.00    R$ 0.00       0.00%           R$ 34.50      R$ 151.00 4,43% 
+```
+
+It is also possible to see the summary for a specific year. This is useful for calculating end of
+year position for tax purposes.
+
+```shell
+cargo run -- summary 2022
 ```
 
 ### Selling stocks
