@@ -121,7 +121,7 @@ impl Stock {
         let mut quantity = 0;
 
         for trade in &self.trades {
-            if trade.date > date {
+            if trade.date >= date {
                 break;
             }
 
@@ -142,7 +142,7 @@ impl Stock {
 
         // We assume that the trades are sorted by date.
         for trade in &self.trades {
-            if trade.date > date {
+            if trade.date >= date {
                 break;
             }
 
