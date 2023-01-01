@@ -1,17 +1,20 @@
 """This is an auxiliary script to load the history from the `history.csv` file and execute the
 trades in the CLI."""
+import datetime
 import subprocess
 
 
 def main() -> None:
     history = load_history()
 
-    for trade in history:
+    for i, trade in enumerate(history):
         command = "buy" if trade["kind"] == "C" else "sell"
 
-        # Switch the date from "01/01/2021" to "2021-01-01
-        date = "-".join(trade['date'].split("/")[::-1])
-        subprocess.run(f"./target/release/cli {command} {trade['symbol']} {trade['quantity']} {trade['price']} {date}", shell=True, check=True)
+        date = datetime.datetime.strptime(trade['date'], "%d/%m/%Y")
+        # Add 1 second to each trade to avoid the same timestamp
+        date = date + datetime.timedelta(seconds=i)
+
+        subprocess.run(f"./target/release/cli {command} {trade['symbol']} {trade['quantity']} {trade['price']} '{date.strftime('%Y-%m-%d %H:%M:%S')}'", shell=True, check=True)
 
 
 

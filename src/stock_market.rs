@@ -57,13 +57,14 @@ impl StockMarket {
     /// Given a slice of stocks, fetches current information about them from the stock market.
     pub async fn get_stock_prices(&self, stocks: &[&Stock]) -> Result<Vec<Result<PricedStock>>> {
         let mut handles: Vec<JoinHandle<Result<PricedStock>>> = Vec::with_capacity(stocks.len());
+        let now = chrono::offset::Local::now().naive_local();
 
         for stock in stocks {
             let handle = tokio::spawn(StockMarket::get_stock_price(
                 self.client.clone(),
                 stock.symbol.to_string(),
-                stock.quantity(),
-                stock.average_purchase_price(),
+                stock.quantity(now),
+                stock.average_purchase_price(now),
             ));
 
             handles.push(handle);

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Datelike;
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -20,9 +20,8 @@ pub struct Stock {
 pub struct Trade {
     pub quantity: u32,
     pub price: f64,
-    pub date: NaiveDate,
+    pub date: NaiveDateTime,
     pub kind: TradeKind,
-    pub profit: f64,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -67,7 +66,7 @@ impl Portfolio {
         symbol: &str,
         quantity: u32,
         price: f64,
-        date: NaiveDate,
+        date: NaiveDateTime,
     ) -> Result<(), TradeError> {
         let stock = self
             .stocks
@@ -82,7 +81,7 @@ impl Portfolio {
         symbol: &str,
         quantity: u32,
         price: f64,
-        date: NaiveDate,
+        date: NaiveDateTime,
     ) -> Result<f64, TradeError> {
         let stock = self
             .stocks
@@ -117,11 +116,15 @@ impl Stock {
             ..Default::default()
         }
     }
-    /// Dynamically calculate the total quantity of the stock.
-    pub fn quantity(&self) -> u32 {
+    /// Dynamically calculate the total quantity of the stock at a given date.
+    pub fn quantity(&self, date: NaiveDateTime) -> u32 {
         let mut quantity = 0;
 
         for trade in &self.trades {
+            if trade.date > date {
+                break;
+            }
+
             if trade.kind == TradeKind::Buy {
                 quantity += trade.quantity;
             } else {
@@ -132,12 +135,17 @@ impl Stock {
         quantity
     }
 
-    /// Dynamically calculate the average purchase price of the stock.
-    pub fn average_purchase_price(&self) -> f64 {
+    /// Dynamically calculate the average purchase price of the stock at a given date.
+    pub fn average_purchase_price(&self, date: NaiveDateTime) -> f64 {
         let mut quantity = 0;
         let mut average_purchase_price = 0.0;
 
+        // We assume that the trades are sorted by date.
         for trade in &self.trades {
+            if trade.date > date {
+                break;
+            }
+
             if trade.kind == TradeKind::Buy {
                 average_purchase_price = ((average_purchase_price * quantity as f64)
                     + (trade.price * trade.quantity as f64))
@@ -156,13 +164,17 @@ impl Stock {
         average_purchase_price
     }
 
-    pub fn buy(&mut self, quantity: u32, price: f64, date: NaiveDate) -> Result<(), TradeError> {
+    pub fn buy(
+        &mut self,
+        quantity: u32,
+        price: f64,
+        date: NaiveDateTime,
+    ) -> Result<(), TradeError> {
         let trade = Trade {
             quantity,
             price,
             date,
             kind: TradeKind::Buy,
-            profit: 0.0,
         };
 
         self.add_trade(trade);
@@ -170,24 +182,34 @@ impl Stock {
         Ok(())
     }
 
-    pub fn sell(&mut self, quantity: u32, price: f64, date: NaiveDate) -> Result<f64, TradeError> {
-        if quantity > self.quantity() {
+    pub fn sell(
+        &mut self,
+        quantity: u32,
+        price: f64,
+        date: NaiveDateTime,
+    ) -> Result<f64, TradeError> {
+        if quantity > self.quantity(date) {
             return Err(TradeError::NotEnoughShares);
         }
-
-        let profit = (price - self.average_purchase_price()) * quantity as f64;
 
         let trade = Trade {
             quantity,
             price,
             date,
             kind: TradeKind::Sell,
-            profit,
         };
+
+        let profit = self.calculate_profit(&trade);
 
         self.add_trade(trade);
 
         Ok(profit)
+    }
+
+    fn calculate_profit(&self, trade: &Trade) -> f64 {
+        let average_purchase_price = self.average_purchase_price(trade.date);
+
+        (trade.price - average_purchase_price) * trade.quantity as f64
     }
 
     pub fn get_profit_by_month(&self, year: i32) -> Vec<MonthSummary> {
@@ -205,7 +227,7 @@ impl Stock {
             let month = trade.date.month() as usize - 1;
 
             profit_by_month[month].sold_amount += trade.price * trade.quantity as f64;
-            profit_by_month[month].profit += trade.profit;
+            profit_by_month[month].profit += self.calculate_profit(trade);
         }
 
         profit_by_month

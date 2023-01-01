@@ -1,6 +1,6 @@
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use anyhow::Result;
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use log::{error, info, warn};
 use stocks::{
     portfolio::{Portfolio, Stock},
@@ -20,7 +20,7 @@ impl App {
         }
     }
 
-    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, date: NaiveDate) {
+    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, date: NaiveDateTime) {
         if let Err(e) = self.portfolio.buy(symbol, quantity, price, date) {
             error!("Could not buy {symbol} because {e:?}",);
             std::process::exit(1)
@@ -42,7 +42,7 @@ impl App {
         }
     }
 
-    pub fn sell(&mut self, symbol: &str, quantity: u32, price: f64, date: NaiveDate) {
+    pub fn sell(&mut self, symbol: &str, quantity: u32, price: f64, date: NaiveDateTime) {
         match self.portfolio.sell(symbol, quantity, price, date) {
             Ok(profit) => info!(
                 "You sold {quantity} {symbol} profiting R${profit:10.2}.",
@@ -66,11 +66,13 @@ impl App {
     }
 
     pub async fn summarize(&self) -> Result<()> {
+        let now = chrono::Local::now().naive_local();
+
         let stocks: Vec<&Stock> = self
             .portfolio
             .stocks
             .values()
-            .filter(|stock| stock.quantity() > 0)
+            .filter(|stock| stock.quantity(now) > 0)
             .collect();
 
         let priced_stocks = self.stock_market.get_stock_prices(&stocks).await?;

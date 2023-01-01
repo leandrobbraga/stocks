@@ -3,7 +3,7 @@ mod render;
 
 use anyhow::Result;
 use app::App;
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 use log::{error, info, warn};
@@ -28,8 +28,8 @@ pub enum Command {
         /// How much was the average cost of the purchase (e.g. 33.21)
         price: f64,
         #[clap(value_parser=parse_date)]
-        #[arg(default_value_t = chrono::Local::now().date_naive())]
-        date: NaiveDate,
+        #[arg(default_value_t = chrono::Local::now().naive_local())]
+        date: NaiveDateTime,
     },
     /// Sells an asset
     Sell {
@@ -40,8 +40,8 @@ pub enum Command {
         /// How much was the average cost of the sell (e.g. 33.21)
         price: f64,
         #[clap(value_parser=parse_date)]
-        #[arg(default_value_t = chrono::Local::now().date_naive())]
-        date: NaiveDate,
+        #[arg(default_value_t = chrono::Local::now().naive_local())]
+        date: NaiveDateTime,
     },
     /// Print a summary of the portfolio
     Summary,
@@ -105,6 +105,6 @@ fn setup_logger() {
     env_logger::init_from_env(env);
 }
 
-fn parse_date(arg: &str) -> Result<NaiveDate> {
-    Ok(NaiveDate::parse_from_str(arg, "%Y-%m-%d")?)
+fn parse_date(arg: &str) -> Result<NaiveDateTime> {
+    Ok(NaiveDateTime::parse_from_str(arg, "%Y-%m-%d %H:%M:%S")?)
 }
