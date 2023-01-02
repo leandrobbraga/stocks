@@ -20,8 +20,8 @@ impl App {
         }
     }
 
-    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, date: NaiveDateTime) {
-        if let Err(e) = self.portfolio.buy(symbol, quantity, price, date) {
+    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: NaiveDateTime) {
+        if let Err(e) = self.portfolio.buy(symbol, quantity, price, datetime) {
             error!("Could not buy {symbol} because {e:?}",);
             std::process::exit(1)
         }
@@ -42,8 +42,8 @@ impl App {
         }
     }
 
-    pub fn sell(&mut self, symbol: &str, quantity: u32, price: f64, date: NaiveDateTime) {
-        match self.portfolio.sell(symbol, quantity, price, date) {
+    pub fn sell(&mut self, symbol: &str, quantity: u32, price: f64, datetime: NaiveDateTime) {
+        match self.portfolio.sell(symbol, quantity, price, datetime) {
             Ok(profit) => info!(
                 "You sold {quantity} {symbol} profiting R${profit:10.2}.",
                 quantity = quantity,

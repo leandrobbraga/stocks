@@ -20,7 +20,7 @@ pub struct Stock {
 pub struct Trade {
     pub quantity: u32,
     pub price: f64,
-    pub date: NaiveDateTime,
+    pub datetime: NaiveDateTime,
     pub kind: TradeKind,
 }
 
@@ -66,14 +66,14 @@ impl Portfolio {
         symbol: &str,
         quantity: u32,
         price: f64,
-        date: NaiveDateTime,
+        datetime: NaiveDateTime,
     ) -> Result<(), TradeError> {
         let stock = self
             .stocks
             .entry(symbol.to_string())
             .or_insert_with(|| Stock::new(symbol.to_string()));
 
-        stock.buy(quantity, price, date)
+        stock.buy(quantity, price, datetime)
     }
 
     pub fn sell(
@@ -81,14 +81,14 @@ impl Portfolio {
         symbol: &str,
         quantity: u32,
         price: f64,
-        date: NaiveDateTime,
+        datetime: NaiveDateTime,
     ) -> Result<f64, TradeError> {
         let stock = self
             .stocks
             .get_mut(symbol)
             .ok_or(TradeError::NotEnoughShares)?;
 
-        let profit = stock.sell(quantity, price, date)?;
+        let profit = stock.sell(quantity, price, datetime)?;
 
         Ok(profit)
     }
@@ -121,7 +121,7 @@ impl Stock {
         let mut quantity = 0;
 
         for trade in &self.trades {
-            if trade.date >= date {
+            if trade.datetime >= date {
                 break;
             }
 
@@ -142,7 +142,7 @@ impl Stock {
 
         // We assume that the trades are sorted by date.
         for trade in &self.trades {
-            if trade.date >= date {
+            if trade.datetime >= date {
                 break;
             }
 
@@ -168,12 +168,12 @@ impl Stock {
         &mut self,
         quantity: u32,
         price: f64,
-        date: NaiveDateTime,
+        datetime: NaiveDateTime,
     ) -> Result<(), TradeError> {
         let trade = Trade {
             quantity,
             price,
-            date,
+            datetime,
             kind: TradeKind::Buy,
         };
 
@@ -186,16 +186,16 @@ impl Stock {
         &mut self,
         quantity: u32,
         price: f64,
-        date: NaiveDateTime,
+        datetime: NaiveDateTime,
     ) -> Result<f64, TradeError> {
-        if quantity > self.quantity(date) {
+        if quantity > self.quantity(datetime) {
             return Err(TradeError::NotEnoughShares);
         }
 
         let trade = Trade {
             quantity,
             price,
-            date,
+            datetime,
             kind: TradeKind::Sell,
         };
 
@@ -207,7 +207,7 @@ impl Stock {
     }
 
     fn calculate_profit(&self, trade: &Trade) -> f64 {
-        let average_purchase_price = self.average_purchase_price(trade.date);
+        let average_purchase_price = self.average_purchase_price(trade.datetime);
 
         (trade.price - average_purchase_price) * trade.quantity as f64
     }
@@ -220,11 +220,11 @@ impl Stock {
                 continue;
             }
 
-            if trade.date.year() != year {
+            if trade.datetime.year() != year {
                 continue;
             }
 
-            let month = trade.date.month() as usize - 1;
+            let month = trade.datetime.month() as usize - 1;
 
             profit_by_month[month].sold_amount += trade.price * trade.quantity as f64;
             profit_by_month[month].profit += self.calculate_profit(trade);
@@ -238,6 +238,6 @@ impl Stock {
 
         // We ensure that the trades are sorted by date so that we can iterate over all the trades
         // in chronological order.
-        self.trades.sort_by(|a, b| a.date.cmp(&b.date));
+        self.trades.sort_by(|a, b| a.datetime.cmp(&b.datetime));
     }
 }

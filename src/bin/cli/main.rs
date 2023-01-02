@@ -1,7 +1,7 @@
 mod app;
 mod render;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use app::App;
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use clap::{Parser, Subcommand};
@@ -27,9 +27,9 @@ pub enum Command {
         quantity: u32,
         /// How much was the average cost of the purchase (e.g. 33.21)
         price: f64,
-        #[clap(value_parser=parse_date)]
+        #[clap(value_parser=parse_datetime)]
         #[arg(default_value_t = chrono::Local::now().naive_local())]
-        date: NaiveDateTime,
+        datetime: NaiveDateTime,
     },
     /// Sells an asset
     Sell {
@@ -41,7 +41,7 @@ pub enum Command {
         price: f64,
         #[clap(value_parser=parse_datetime)]
         #[arg(default_value_t = chrono::Local::now().naive_local())]
-        date: NaiveDateTime,
+        datetime: NaiveDateTime,
     },
     /// Print a summary of the portfolio
     Summary {
@@ -80,18 +80,14 @@ async fn main() -> Result<()> {
             symbol,
             quantity,
             price,
-            date,
-        } => {
-            app.buy(&symbol.to_uppercase(), quantity, price, date);
-        }
+            datetime,
+        } => app.buy(&symbol.to_uppercase(), quantity, price, datetime),
         Command::Sell {
             symbol,
             quantity,
             price,
-            date,
-        } => {
-            app.sell(&symbol.to_uppercase(), quantity, price, date);
-        }
+            datetime,
+        } => app.sell(&symbol.to_uppercase(), quantity, price, datetime),
         Command::Summary { date } => {
             match app.summarize(date).await {
                 Ok(_) => (),
@@ -116,6 +112,9 @@ fn setup_logger() {
 }
 
 fn parse_datetime(arg: &str) -> Result<NaiveDateTime> {
+    // The default `to_string` from NaiveDateTime contains the fraction of second, but it would be
+    // cumbersome to ask the user to provide it. So we just remove it.
+    let arg = arg.split('.').next().unwrap();
     Ok(NaiveDateTime::parse_from_str(arg, "%Y-%m-%d %H:%M:%S")?)
 }
 
