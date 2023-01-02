@@ -1,7 +1,7 @@
 mod app;
 mod render;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use app::App;
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use clap::{Parser, Subcommand};
