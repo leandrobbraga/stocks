@@ -6,7 +6,6 @@ use app::App;
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use env_logger::Env;
-use log::{error, info, warn};
 use stocks::portfolio::Portfolio;
 use stocks::stock_market::StockMarket;
 
@@ -66,8 +65,8 @@ async fn main() -> Result<()> {
     let portfolio = match Portfolio::load() {
         Ok(portfolio) => portfolio,
         Err(e) => {
-            warn!("Could not load portfolio: {e:?}", e = e);
-            info!("Creating a new portfolio.");
+            log::warn!("Could not load portfolio: {e}");
+            log::info!("Creating a new portfolio.");
             Portfolio::new()
         }
     };
@@ -92,7 +91,7 @@ async fn main() -> Result<()> {
             match app.summarize(date).await {
                 Ok(_) => (),
                 Err(e) => {
-                    error!("Could not summarize portfolio: {e:?}", e = e);
+                    log::error!("Could not summarize portfolio: {e}");
                     std::process::exit(1)
                 }
             };

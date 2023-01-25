@@ -1,7 +1,6 @@
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use anyhow::Result;
 use chrono::{NaiveDate, NaiveDateTime};
-use log::{error, info, warn};
 use stocks::{
     portfolio::{Portfolio, Stock},
     stock_market::{PricedStock, StockMarket},
@@ -22,11 +21,11 @@ impl App {
 
     pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: NaiveDateTime) {
         if let Err(e) = self.portfolio.buy(symbol, quantity, price, datetime) {
-            error!("Could not buy {symbol} because {e:?}",);
+            log::error!("Could not buy {symbol} because {e:?}");
             std::process::exit(1)
         }
 
-        info!(
+        log::info!(
             "You bought {quantity} {symbol} at R${price:10.2}.",
             quantity = quantity,
             symbol = symbol,
@@ -36,7 +35,7 @@ impl App {
         match self.portfolio.save() {
             Ok(_) => {}
             Err(e) => {
-                error!("Could not save portfolio: {e:?}", e = e);
+                log::error!("Could not save portfolio: {e}");
                 std::process::exit(1)
             }
         }
@@ -44,14 +43,14 @@ impl App {
 
     pub fn sell(&mut self, symbol: &str, quantity: u32, price: f64, datetime: NaiveDateTime) {
         match self.portfolio.sell(symbol, quantity, price, datetime) {
-            Ok(profit) => info!(
+            Ok(profit) => log::info!(
                 "You sold {quantity} {symbol} profiting R${profit:10.2}.",
                 quantity = quantity,
                 symbol = symbol,
                 profit = profit
             ),
             Err(e) => {
-                error!("Could not sell {symbol} because {e:?}",);
+                log::error!("Could not sell {symbol} because {e:?}");
                 std::process::exit(1)
             }
         }
@@ -59,7 +58,7 @@ impl App {
         match self.portfolio.save() {
             Ok(_) => (),
             Err(e) => {
-                error!("Could not save portfolio: {e:?}", e = e);
+                log::error!("Could not save portfolio: {e}");
                 std::process::exit(1)
             }
         }
@@ -82,13 +81,13 @@ impl App {
             match priced_stock {
                 Ok(stock) => data.push(stock.into()),
                 Err(e) => {
-                    warn!("Could not fetch stock price: {e:?}", e = e);
+                    log::warn!("Could not fetch stock price: {e}");
                 }
             }
         }
 
         if let Err(e) = render_summary(data) {
-            error!("Could not render table: {e:?}", e = e);
+            log::error!("Could not render table: {e}");
             std::process::exit(1)
         };
 
@@ -116,7 +115,7 @@ impl App {
         }
 
         if let Err(e) = render_profit_by_month(data) {
-            error!("Could not render table: {e:?}", e = e);
+            log::error!("Could not render table: {e}");
             std::process::exit(1)
         };
     }
