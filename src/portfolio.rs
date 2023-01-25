@@ -1,3 +1,5 @@
+use anyhow::ensure;
+use anyhow::Context;
 use anyhow::Result;
 use chrono::Datelike;
 use chrono::NaiveDateTime;
@@ -30,12 +32,6 @@ pub enum TradeKind {
     Sell,
 }
 
-#[derive(Debug)]
-pub enum TradeError {
-    NotEnoughShares,
-    OutOfOrderTrade,
-}
-
 #[derive(Default, Debug, Clone)]
 pub struct MonthSummary {
     pub profit: f64,
@@ -61,13 +57,7 @@ impl Portfolio {
         Ok(portfolio)
     }
 
-    pub fn buy(
-        &mut self,
-        symbol: &str,
-        quantity: u32,
-        price: f64,
-        datetime: NaiveDateTime,
-    ) -> Result<(), TradeError> {
+    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: NaiveDateTime) {
         let stock = self
             .stocks
             .entry(symbol.to_string())
@@ -82,15 +72,13 @@ impl Portfolio {
         quantity: u32,
         price: f64,
         datetime: NaiveDateTime,
-    ) -> Result<f64, TradeError> {
+    ) -> Result<f64> {
         let stock = self
             .stocks
             .get_mut(symbol)
-            .ok_or(TradeError::NotEnoughShares)?;
+            .context("Not enough shares to sell")?;
 
-        let profit = stock.sell(quantity, price, datetime)?;
-
-        Ok(profit)
+        stock.sell(quantity, price, datetime)
     }
 
     pub fn profit_by_month(&self, year: i32) -> Vec<MonthSummary> {
@@ -164,12 +152,7 @@ impl Stock {
         average_purchase_price
     }
 
-    pub fn buy(
-        &mut self,
-        quantity: u32,
-        price: f64,
-        datetime: NaiveDateTime,
-    ) -> Result<(), TradeError> {
+    pub fn buy(&mut self, quantity: u32, price: f64, datetime: NaiveDateTime) {
         let trade = Trade {
             quantity,
             price,
@@ -177,20 +160,14 @@ impl Stock {
             kind: TradeKind::Buy,
         };
 
-        self.add_trade(trade);
-
-        Ok(())
+        self.add_trade(trade)
     }
 
-    pub fn sell(
-        &mut self,
-        quantity: u32,
-        price: f64,
-        datetime: NaiveDateTime,
-    ) -> Result<f64, TradeError> {
-        if quantity > self.quantity(datetime) {
-            return Err(TradeError::NotEnoughShares);
-        }
+    pub fn sell(&mut self, quantity: u32, price: f64, datetime: NaiveDateTime) -> Result<f64> {
+        ensure!(
+            quantity > self.quantity(datetime),
+            "Not enough shares to sell"
+        );
 
         let trade = Trade {
             quantity,

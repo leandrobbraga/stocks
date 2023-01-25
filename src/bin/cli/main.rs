@@ -1,23 +1,16 @@
-mod app;
+mod commands;
 mod render;
 
 use anyhow::Result;
-use app::App;
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use env_logger::Env;
 use stocks::portfolio::Portfolio;
 use stocks::stock_market::StockMarket;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Arguments {
-    #[command(subcommand)]
-    command: Command,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum Command {
+enum Command {
     /// Buys an asset
     Buy {
         /// The ticker of the stock (e.g. BBAS3)
@@ -60,19 +53,13 @@ pub enum Command {
 async fn main() -> Result<()> {
     setup_logger();
 
-    let command = Arguments::parse().command;
+    let command = Command::parse();
 
-    let portfolio = match Portfolio::load() {
-        Ok(portfolio) => portfolio,
-        Err(e) => {
-            log::warn!("Could not load portfolio: {e}");
-            log::info!("Creating a new portfolio.");
-            Portfolio::new()
-        }
-    };
-    let stock_market = StockMarket::new();
-
-    let mut app = App::new(portfolio, stock_market);
+    let mut portfolio = Portfolio::load().unwrap_or_else(|err| {
+        log::warn!("Could not load portfolio: {err}");
+        log::info!("Creating a new portfolio.");
+        Portfolio::new()
+    });
 
     match command {
         Command::Buy {
@@ -80,29 +67,34 @@ async fn main() -> Result<()> {
             quantity,
             price,
             datetime,
-        } => app.buy(&symbol.to_uppercase(), quantity, price, datetime),
+        } => commands::buy(
+            &mut portfolio,
+            &symbol.to_uppercase(),
+            quantity,
+            price,
+            datetime,
+        ),
         Command::Sell {
             symbol,
             quantity,
             price,
             datetime,
-        } => app.sell(&symbol.to_uppercase(), quantity, price, datetime),
+        } => commands::sell(
+            &mut portfolio,
+            &symbol.to_uppercase(),
+            quantity,
+            price,
+            datetime,
+        ),
         Command::Summary { date } => {
-            match app.summarize(date).await {
-                Ok(_) => (),
-                Err(e) => {
-                    log::error!("Could not summarize portfolio: {e}");
-                    std::process::exit(1)
-                }
-            };
+            let stock_market = StockMarket::new();
+            commands::summarize(&portfolio, &stock_market, date).await
         }
         Command::ProfitSummary { year } => {
             let year = u16::try_from(year)?;
-            app.profit_summary(year);
+            commands::profit_summary(&portfolio, year)
         }
-    };
-
-    Ok(())
+    }
 }
 
 fn setup_logger() {
