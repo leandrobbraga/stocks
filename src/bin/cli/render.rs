@@ -100,7 +100,7 @@ fn format_summary_totals(data: &[SummaryData]) -> Vec<CellStruct> {
         "Total".cell().justify(Justify::Left).bold(true),
         "".cell(),
         "".cell(),
-        format!("R$ {:10.2}", current_value)
+        format!("R$ {current_value:10.2}")
             .cell()
             .justify(Justify::Right)
             .bold(true),
@@ -115,7 +115,7 @@ fn format_summary_totals(data: &[SummaryData]) -> Vec<CellStruct> {
             .bold(true)
             .foreground_color(change_color),
         "".cell(),
-        format!("R$ {:10.2}", profit)
+        format!("R$ {profit:10.2}")
             .cell()
             .justify(Justify::Right)
             .foreground_color(profit_color)
@@ -181,16 +181,16 @@ fn format_profit_summary_totals(data: &[ProfitSummaryData]) -> Vec<CellStruct> {
 
     vec![
         "Total".cell().justify(Justify::Left).bold(true),
-        format!("R$ {:10.2}", sold_amount_total)
+        format!("R$ {sold_amount_total:10.2}")
             .cell()
             .justify(Justify::Right)
             .bold(true),
-        format!("R$ {:10.2}", profit_total)
+        format!("R$ {profit_total:10.2}")
             .cell()
             .justify(Justify::Right)
             .bold(true)
             .foreground_color(profit_color),
-        format!("R$ {:10.2}", tax_total)
+        format!("R$ {tax_total:10.2}")
             .cell()
             .justify(Justify::Right)
             .bold(true),
