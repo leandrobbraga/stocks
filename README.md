@@ -11,7 +11,10 @@ the command `profit-summary`.
 
 ![Contains the `profit-summary` command output, a table with the profit for each month of a given year](resources/profit-summary.png)
 
-**The current implementation is aimed to stocks listed in the Brazilian market (BOVESPA).**
+NOTES:
+
+1. **The current implementation is aimed to stocks listed in the Brazilian market (BOVESPA).**
+1. **It does not support day trades, it will consider all transactions as being swing trades.**
 
 ## Prerequisites
 
