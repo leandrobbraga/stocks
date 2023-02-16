@@ -165,7 +165,7 @@ impl Stock {
 
     pub fn sell(&mut self, quantity: u32, price: f64, datetime: NaiveDateTime) -> Result<f64> {
         ensure!(
-            quantity < self.quantity(datetime),
+            quantity <= self.quantity(datetime),
             "Not enough shares to sell"
         );
 
