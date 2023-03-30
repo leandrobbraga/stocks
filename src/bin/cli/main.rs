@@ -1,10 +1,11 @@
 mod commands;
+#[macro_use]
+mod log;
 mod render;
 
 use anyhow::Result;
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use clap::Parser;
-use env_logger::Env;
 use stocks::portfolio::Portfolio;
 use stocks::stock_market::StockMarket;
 
@@ -51,13 +52,11 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    setup_logger();
-
     let command = Command::parse();
 
     let mut portfolio = Portfolio::load().unwrap_or_else(|err| {
-        log::warn!("Could not load portfolio: {err}");
-        log::info!("Creating a new portfolio.");
+        warn!("Could not load portfolio: {err}");
+        info!("Creating a new portfolio.");
         Portfolio::new()
     });
 
@@ -95,11 +94,6 @@ async fn main() -> Result<()> {
             commands::profit_summary(&portfolio, year)
         }
     }
-}
-
-fn setup_logger() {
-    let env = Env::default().filter_or("RUST_LOG", "info");
-    env_logger::init_from_env(env);
 }
 
 fn parse_datetime(arg: &str) -> Result<NaiveDateTime> {

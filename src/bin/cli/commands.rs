@@ -1,4 +1,5 @@
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
+use crate::{info, warn};
 use anyhow::Result;
 use chrono::{NaiveDate, NaiveDateTime};
 use stocks::{
@@ -15,12 +16,7 @@ pub fn buy(
 ) -> Result<()> {
     portfolio.buy(symbol, quantity, price, datetime);
 
-    log::info!(
-        "You bought {quantity} {symbol} at R${price:10.2}.",
-        quantity = quantity,
-        symbol = symbol,
-        price = price
-    );
+    info!("You bought {quantity} {symbol} at R${price:10.2}.");
 
     portfolio.save()
 }
@@ -34,12 +30,7 @@ pub fn sell(
 ) -> Result<()> {
     let profit = portfolio.sell(symbol, quantity, price, datetime)?;
 
-    log::info!(
-        "You sold {quantity} {symbol} profiting R${profit:10.2}.",
-        quantity = quantity,
-        symbol = symbol,
-        profit = profit
-    );
+    info!("You sold {quantity} {symbol} profiting R${profit:10.2}.");
 
     portfolio.save()
 }
@@ -66,7 +57,7 @@ pub async fn summarize(
         .collect();
 
     if stock_count > data.len() {
-        log::warn!("Could not get prices for all stocks");
+        warn!("Could not get prices for all stocks");
     }
 
     render_summary(data)
