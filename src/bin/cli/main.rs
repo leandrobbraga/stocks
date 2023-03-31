@@ -30,8 +30,7 @@ enum Command {
     Help,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let mut args = std::env::args();
 
     let Some(program) = args.next() else {
@@ -82,7 +81,7 @@ async fn main() -> Result<()> {
         ),
         Command::Summary { date } => {
             let stock_market = StockMarket::new();
-            commands::summarize(&portfolio, &stock_market, date).await
+            commands::summarize(&portfolio, &stock_market, date)
         }
         Command::ProfitSummary { year } => {
             let year = u16::try_from(year)?;
@@ -163,7 +162,7 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command, Stri
             Ok(Command::ProfitSummary { year })
         }
         "-h" | "--help" => Ok(Command::Help),
-        _ => Err(format!("Unknown subcommand {command}")),
+        _ => Err(format!("Unknown subcommand `{command}`")),
     }
 }
 

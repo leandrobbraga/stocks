@@ -35,11 +35,7 @@ pub fn sell(
     portfolio.save()
 }
 
-pub async fn summarize(
-    portfolio: &Portfolio,
-    stock_market: &StockMarket,
-    date: NaiveDate,
-) -> Result<()> {
+pub fn summarize(portfolio: &Portfolio, stock_market: &StockMarket, date: NaiveDate) -> Result<()> {
     let date = date.and_hms_opt(23, 59, 59).expect("BUG: Invalid date");
 
     let stocks: Vec<&Stock> = portfolio
@@ -49,7 +45,7 @@ pub async fn summarize(
         .filter(|stock| stock.quantity(date) > 0)
         .collect();
 
-    let priced_stocks = stock_market.get_stock_prices(&stocks, date).await?;
+    let priced_stocks = stock_market.get_stock_prices(&stocks, date);
     let stock_count = priced_stocks.len();
     let data: Vec<SummaryData> = priced_stocks
         .into_iter()

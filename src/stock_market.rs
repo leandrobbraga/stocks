@@ -1,16 +1,16 @@
 use super::portfolio::Stock;
 use anyhow::Result;
 use chrono::NaiveDateTime;
+use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde::Serialize;
-use tokio::task::JoinHandle;
 
 const API_URL: &str = "https://mfinance.com.br/api/v1/stocks/";
 
 /// Represents the stock market, it's responsible for fetching real stock information.
 #[derive(Default)]
 pub struct StockMarket {
-    client: reqwest::Client,
+    client: Client,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -51,48 +51,53 @@ pub struct MFinanceResponse {
 impl StockMarket {
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: Client::new(),
         }
     }
 
     /// Given a slice of stocks, fetches current information about them from the stock market.
-    pub async fn get_stock_prices(
+    pub fn get_stock_prices(
         &self,
         stocks: &[&Stock],
         date: NaiveDateTime,
-    ) -> Result<Vec<Result<PricedStock>>> {
-        let mut handles: Vec<JoinHandle<Result<PricedStock>>> = Vec::with_capacity(stocks.len());
+    ) -> Vec<Result<PricedStock>> {
+        std::thread::scope(|s| {
+            let mut handles = Vec::with_capacity(stocks.len());
 
-        for stock in stocks {
-            let handle = tokio::spawn(StockMarket::get_stock_price(
-                self.client.clone(),
-                stock.symbol.to_string(),
-                stock.quantity(date),
-                stock.average_purchase_price(date),
-            ));
+            for stock in stocks {
+                let handle = s.spawn(|| {
+                    StockMarket::get_stock_price(
+                        self.client.clone(),
+                        stock.symbol.as_str(),
+                        stock.quantity(date),
+                        stock.average_purchase_price(date),
+                    )
+                });
+                handles.push(handle);
+            }
 
-            handles.push(handle);
-        }
-
-        let mut results = Vec::with_capacity(stocks.len());
-        for handle in handles {
-            results.push(handle.await?);
-        }
-
-        Ok(results)
+            handles
+                .into_iter()
+                .map(|handle| {
+                    handle.join().unwrap_or_else(|err| {
+                        Err(anyhow::anyhow!("Failed to fetch stock price: {err:?}"))
+                    })
+                })
+                .collect()
+        })
     }
 
     /// Fetches current information about a stock from the stock market.
-    async fn get_stock_price(
-        client: reqwest::Client,
-        symbol: String,
+    fn get_stock_price(
+        client: Client,
+        symbol: &str,
         quantity: u32,
         average_price: f64,
     ) -> Result<PricedStock> {
-        let response = client.get(format!("{API_URL}/{symbol}")).send().await?;
-        let response: MFinanceResponse = response.json().await?;
+        let response = client.get(format!("{API_URL}/{symbol}")).send()?;
+        let response: MFinanceResponse = response.json()?;
         Ok(PricedStock {
-            symbol,
+            symbol: response.symbol,
             quantity,
             average_price,
             price: response.last_price,
