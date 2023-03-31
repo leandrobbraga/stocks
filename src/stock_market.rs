@@ -1,16 +1,15 @@
 use super::portfolio::Stock;
 use anyhow::Result;
 use chrono::NaiveDateTime;
-use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde::Serialize;
+use ureq::Agent;
 
 const API_URL: &str = "https://mfinance.com.br/api/v1/stocks/";
 
 /// Represents the stock market, it's responsible for fetching real stock information.
-#[derive(Default)]
 pub struct StockMarket {
-    client: Client,
+    client: Agent,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -51,7 +50,7 @@ pub struct MFinanceResponse {
 impl StockMarket {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            client: Agent::new(),
         }
     }
 
@@ -89,13 +88,13 @@ impl StockMarket {
 
     /// Fetches current information about a stock from the stock market.
     fn get_stock_price(
-        client: Client,
+        client: Agent,
         symbol: &str,
         quantity: u32,
         average_price: f64,
     ) -> Result<PricedStock> {
-        let response = client.get(format!("{API_URL}/{symbol}")).send()?;
-        let response: MFinanceResponse = response.json()?;
+        let response = client.get(format!("{API_URL}/{symbol}").as_str()).call()?;
+        let response: MFinanceResponse = response.into_json()?;
         Ok(PricedStock {
             symbol: response.symbol,
             quantity,
