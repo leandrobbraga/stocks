@@ -1,18 +1,18 @@
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use crate::{info, warn};
 use anyhow::Result;
-use chrono::{NaiveDate, NaiveDateTime};
 use stocks::{
     portfolio::{Portfolio, Stock},
     stock_market::{PricedStock, StockMarket},
 };
+use time::{Date, OffsetDateTime, UtcOffset};
 
 pub fn buy(
     portfolio: &mut Portfolio,
     symbol: &str,
     quantity: u32,
     price: f64,
-    datetime: NaiveDateTime,
+    datetime: OffsetDateTime,
 ) -> Result<()> {
     portfolio.buy(symbol, quantity, price, datetime);
 
@@ -26,7 +26,7 @@ pub fn sell(
     symbol: &str,
     quantity: u32,
     price: f64,
-    datetime: NaiveDateTime,
+    datetime: OffsetDateTime,
 ) -> Result<()> {
     let profit = portfolio.sell(symbol, quantity, price, datetime)?;
 
@@ -35,8 +35,10 @@ pub fn sell(
     portfolio.save()
 }
 
-pub fn summarize(portfolio: &Portfolio, stock_market: &StockMarket, date: NaiveDate) -> Result<()> {
-    let date = date.and_hms_opt(23, 59, 59).expect("BUG: Invalid date");
+pub fn summarize(portfolio: &Portfolio, stock_market: &StockMarket, date: Date) -> Result<()> {
+    let date = date
+        .with_time(time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"))
+        .assume_offset(UtcOffset::UTC);
 
     let stocks: Vec<&Stock> = portfolio
         .stocks

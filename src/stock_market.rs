@@ -1,8 +1,8 @@
 use super::portfolio::Stock;
 use anyhow::Result;
-use chrono::NaiveDateTime;
 use serde::Deserialize;
 use serde::Serialize;
+use time::OffsetDateTime;
 use ureq::Agent;
 
 const API_URL: &str = "https://mfinance.com.br/api/v1/stocks/";
@@ -58,7 +58,7 @@ impl StockMarket {
     pub fn get_stock_prices(
         &self,
         stocks: &[&Stock],
-        date: NaiveDateTime,
+        date: OffsetDateTime,
     ) -> Vec<Result<PricedStock>> {
         std::thread::scope(|s| {
             let mut handles = Vec::with_capacity(stocks.len());

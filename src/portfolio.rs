@@ -1,11 +1,10 @@
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
-use chrono::Datelike;
-use chrono::NaiveDateTime;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use time::OffsetDateTime;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct Portfolio {
@@ -22,7 +21,8 @@ pub struct Stock {
 pub struct Trade {
     pub quantity: u32,
     pub price: f64,
-    pub datetime: NaiveDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub datetime: OffsetDateTime,
     pub kind: TradeKind,
 }
 
@@ -57,7 +57,7 @@ impl Portfolio {
         Ok(portfolio)
     }
 
-    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: NaiveDateTime) {
+    pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: OffsetDateTime) {
         let stock = self
             .stocks
             .entry(symbol.to_string())
@@ -71,7 +71,7 @@ impl Portfolio {
         symbol: &str,
         quantity: u32,
         price: f64,
-        datetime: NaiveDateTime,
+        datetime: OffsetDateTime,
     ) -> Result<f64> {
         let stock = self
             .stocks
@@ -105,7 +105,7 @@ impl Stock {
         }
     }
     /// Dynamically calculate the total quantity of the stock at a given date.
-    pub fn quantity(&self, date: NaiveDateTime) -> u32 {
+    pub fn quantity(&self, date: OffsetDateTime) -> u32 {
         let mut quantity = 0;
 
         for trade in &self.trades {
@@ -124,7 +124,7 @@ impl Stock {
     }
 
     /// Dynamically calculate the average purchase price of the stock at a given date.
-    pub fn average_purchase_price(&self, date: NaiveDateTime) -> f64 {
+    pub fn average_purchase_price(&self, date: OffsetDateTime) -> f64 {
         let mut quantity = 0;
         let mut average_purchase_price = 0.0;
 
@@ -152,7 +152,7 @@ impl Stock {
         average_purchase_price
     }
 
-    pub fn buy(&mut self, quantity: u32, price: f64, datetime: NaiveDateTime) {
+    pub fn buy(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) {
         let trade = Trade {
             quantity,
             price,
@@ -163,7 +163,7 @@ impl Stock {
         self.add_trade(trade)
     }
 
-    pub fn sell(&mut self, quantity: u32, price: f64, datetime: NaiveDateTime) -> Result<f64> {
+    pub fn sell(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) -> Result<f64> {
         ensure!(
             quantity <= self.quantity(datetime),
             "Not enough shares to sell"

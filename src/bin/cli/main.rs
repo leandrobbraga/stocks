@@ -2,27 +2,26 @@ mod commands;
 #[macro_use]
 mod log;
 mod render;
-
-use anyhow::Result;
-use chrono::{Datelike, NaiveDate, NaiveDateTime};
+use anyhow::{Context, Result};
 use stocks::portfolio::Portfolio;
 use stocks::stock_market::StockMarket;
+use time::{format_description, Date, OffsetDateTime, PrimitiveDateTime, UtcOffset};
 
 enum Command {
     Buy {
         symbol: String,
         quantity: u32,
         price: f64,
-        datetime: NaiveDateTime,
+        datetime: OffsetDateTime,
     },
     Sell {
         symbol: String,
         quantity: u32,
         price: f64,
-        datetime: NaiveDateTime,
+        datetime: OffsetDateTime,
     },
     Summary {
-        date: NaiveDate,
+        date: Date,
     },
     ProfitSummary {
         year: i32,
@@ -43,7 +42,7 @@ fn main() -> Result<()> {
         Err(err) => {
             usage(&program);
             println!();
-            error!("{err}");
+            error!("{err}: {}", err.root_cause());
             std::process::exit(1);
         }
     };
@@ -94,36 +93,23 @@ fn main() -> Result<()> {
     }
 }
 
-fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command, String> {
-    let Some(command) = args.next() else {
-        return Err("No subcommand provided.".into())
-    };
+fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
+    let command = args.next().context("No subcommand provided")?;
 
     match command.as_str() {
         "buy" | "sell" => {
-            let Some(symbol) = args.next() else {
-                return Err("No stock symbol provided.".into())
-            };
+            let symbol = args.next().context("No stock symbol provided")?;
 
-            let Some(quantity) = args.next() else {
-                return Err("No quantity provided.".into());
-            };
+            let quantity = args.next().context("No quantity provided")?;
 
-            let Ok(quantity) = quantity.parse::<u32>() else {
-                return Err("Could not parse quantity.".into());
-            };
+            let quantity = quantity
+                .parse::<u32>()
+                .context("Could not parse quantity")?;
 
-            let Some(price) = args.next() else {
-                return Err("No price provided.".into());
-            };
+            let price = args.next().context("No price provided.")?;
+            let price = price.parse::<f64>().context("Could not parse price")?;
 
-            let Ok(price) = price.parse::<f64>() else {
-                return Err("Could not parse price.".into());
-            };
-
-            let Ok(datetime) = parse_datetime(args.next()) else {
-                return Err("Could not parse datetime.".into());
-            };
+            let datetime = parse_datetime(args.next()).context("Could not parse datetime")?;
 
             return Ok(match command.as_str() {
                 "buy" => Command::Buy {
@@ -142,27 +128,20 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command, Stri
             });
         }
         "summary" => {
-            let Ok(date) = parse_date(args.next()) else {
-                return Err("Could not parse date.".into());
-            };
+            let date = parse_date(args.next()).context("Could not parse date")?;
 
             Ok(Command::Summary { date })
         }
         "profit-summary" => {
             let year = match args.next() {
-                Some(year) => {
-                    let Ok(year) = year.parse::<i32>() else {
-                        return Err("Could not parse year.".into());
-                    };
-                    year
-                }
-                None => chrono::Local::now().date_naive().year() as i32,
+                Some(year) => year.parse::<i32>().context("Could not parse year")?,
+                None => OffsetDateTime::now_utc().year() as i32,
             };
 
             Ok(Command::ProfitSummary { year })
         }
         "-h" | "--help" => Ok(Command::Help),
-        _ => Err(format!("Unknown subcommand `{command}`")),
+        _ => anyhow::bail!("Unknown subcommand `{command}`"),
     }
 }
 
@@ -176,16 +155,23 @@ fn usage(program: &str) {
     eprintln!("  \x1b[4mprofit-summary\x1b[0m [YEAR]                              show the month-by-month portfolio profit for a given [YEAR], the default [YEAR] is the current year");
 }
 
-fn parse_datetime(arg: Option<String>) -> Result<NaiveDateTime> {
+fn parse_datetime(arg: Option<String>) -> Result<OffsetDateTime> {
     Ok(match arg {
-        Some(date) => NaiveDateTime::parse_from_str(date.as_str(), "%Y-%m-%d %H:%M:%S")?,
-        None => chrono::Local::now().naive_local(),
+        Some(date) => PrimitiveDateTime::parse(
+            date.as_str(),
+            &format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")?,
+        )?
+        .assume_offset(UtcOffset::UTC),
+        None => OffsetDateTime::now_utc(),
     })
 }
 
-fn parse_date(arg: Option<String>) -> Result<NaiveDate> {
+fn parse_date(arg: Option<String>) -> Result<Date> {
     Ok(match arg {
-        Some(date) => NaiveDate::parse_from_str(date.as_str(), "%Y-%m-%d")?,
-        None => chrono::Local::now().date_naive(),
+        Some(date) => Date::parse(
+            date.as_str(),
+            &format_description::parse("[year]-[month]-[day]")?,
+        )?,
+        None => OffsetDateTime::now_utc().date(),
     })
 }
