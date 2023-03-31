@@ -7,7 +7,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 chrono = { version = "0.4.23", features = ["serde"] }
-clap = { version = "4.0.29", features = ["derive"] }
 cli-table = "0.4.7"
 reqwest = { version = "0.11.13", features = ["json"]}
 serde = { version = "1.0.148", features = ["derive"] }
