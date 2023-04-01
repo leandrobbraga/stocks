@@ -89,8 +89,8 @@ fn format_summary_totals(data: &[SummaryData]) -> String {
 fn get_color(value: f64) -> &'static str {
     match value.partial_cmp(&0.0).unwrap() {
         std::cmp::Ordering::Less => "\x1b[31m",
-        std::cmp::Ordering::Equal => "\x1b[92m",
-        std::cmp::Ordering::Greater => "\x1b[92m",
+        std::cmp::Ordering::Equal => "\x1b[32m",
+        std::cmp::Ordering::Greater => "\x1b[32m",
     }
 }
 
