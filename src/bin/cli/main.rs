@@ -59,38 +59,43 @@ fn main() -> Result<()> {
             quantity,
             price,
             datetime,
-        } => commands::buy(
-            &mut portfolio,
-            &symbol.to_uppercase(),
-            quantity,
-            price,
-            datetime,
-        ),
+        } => {
+            commands::buy(
+                &mut portfolio,
+                &symbol.to_uppercase(),
+                quantity,
+                price,
+                datetime,
+            )?;
+        }
         Command::Sell {
             symbol,
             quantity,
             price,
             datetime,
-        } => commands::sell(
-            &mut portfolio,
-            &symbol.to_uppercase(),
-            quantity,
-            price,
-            datetime,
-        ),
+        } => {
+            commands::sell(
+                &mut portfolio,
+                &symbol.to_uppercase(),
+                quantity,
+                price,
+                datetime,
+            )?;
+        }
         Command::Summary { date } => {
             let stock_market = StockMarket::new();
-            commands::summarize(&portfolio, &stock_market, date)
+            commands::summarize(&portfolio, &stock_market, date);
         }
         Command::ProfitSummary { year } => {
             let year = u16::try_from(year)?;
-            commands::profit_summary(&portfolio, year)
+            commands::profit_summary(&portfolio, year);
         }
         Command::Help => {
             usage(&program);
-            Ok(())
         }
     }
+
+    Ok(())
 }
 
 fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {

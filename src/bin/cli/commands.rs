@@ -35,7 +35,7 @@ pub fn sell(
     portfolio.save()
 }
 
-pub fn summarize(portfolio: &Portfolio, stock_market: &StockMarket, date: Date) -> Result<()> {
+pub fn summarize(portfolio: &Portfolio, stock_market: &StockMarket, date: Date) {
     let date = date
         .with_time(time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"))
         .assume_offset(UtcOffset::UTC);
@@ -61,7 +61,7 @@ pub fn summarize(portfolio: &Portfolio, stock_market: &StockMarket, date: Date) 
     render_summary(data)
 }
 
-pub fn profit_summary(portfolio: &Portfolio, year: u16) -> Result<()> {
+pub fn profit_summary(portfolio: &Portfolio, year: u16) {
     let profit_by_month = portfolio.profit_by_month(year as i32);
 
     let mut data = Vec::with_capacity(12);

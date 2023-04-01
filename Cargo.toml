@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.66"
-cli-table = "0.4.7"
 serde = { version = "1.0.148", features = ["derive"] }
 serde_json = "1.0.89"
 time = { version = "0.3.20", features = ["serde-human-readable"] }

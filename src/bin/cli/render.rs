@@ -1,10 +1,3 @@
-use anyhow::Result;
-
-use cli_table::{
-    format::{Border, Justify, Separator},
-    print_stdout, Cell, CellStruct, Color, Style, Table,
-};
-
 pub struct SummaryData {
     pub name: String,
     pub quantity: u32,
@@ -26,173 +19,116 @@ pub struct ProfitSummaryData {
     pub tax: f64,
 }
 
-pub fn render_summary(mut data: Vec<SummaryData>) -> Result<()> {
+pub fn render_summary(mut data: Vec<SummaryData>) {
     data.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let mut contents: Vec<Vec<CellStruct>> = data.iter().map(format_summary_row).collect();
-    contents.push(format_summary_totals(&data));
+    let titles = format!(
+        "\x1b[1m{:<6}  {:^8}  {:^13}  {:^13}  {:^13}  {:^13}  {:^13}  {:^13}  {:^11}\x1b[0m",
+        "Name",
+        "Quantity",
+        "Current Price",
+        "Current Value",
+        "Change (Day)",
+        "% Change (Day)",
+        "Average Price",
+        "Profit",
+        "% Profit",
+    );
 
-    let table = contents
-        .table()
-        .title(vec![
-            "Name".cell().bold(true).justify(Justify::Left),
-            "Quantity".cell().bold(true).justify(Justify::Center),
-            "Current Price".cell().bold(true).justify(Justify::Center),
-            "Current Value".cell().bold(true).justify(Justify::Center),
-            "Change (Day)".cell().bold(true).justify(Justify::Center),
-            "% Change (Day)".cell().bold(true).justify(Justify::Center),
-            "Average Price".cell().bold(true).justify(Justify::Center),
-            "Profit".cell().bold(true).justify(Justify::Center),
-            "% Profit".cell().bold(true).justify(Justify::Center),
-        ])
-        .separator(Separator::builder().build())
-        .border(Border::builder().build());
+    let contents: Vec<String> = data.iter().map(format_summary_row).collect();
 
-    Ok(print_stdout(table)?)
+    println!("{}", titles);
+    contents.into_iter().for_each(|s| println!("{}", s));
+    println!("{}", format_summary_totals(&data))
 }
 
-fn format_summary_row(data: &SummaryData) -> Vec<CellStruct> {
-    let change_color = get_color(data.change);
-    let profit_color = get_color(data.profit);
-
-    vec![
-        data.name.clone().cell().justify(Justify::Left),
-        data.quantity.cell().justify(Justify::Right),
-        format!("R$ {:10.2}", data.current_price)
-            .cell()
-            .justify(Justify::Right),
-        format!("R$ {:10.2}", data.current_value)
-            .cell()
-            .justify(Justify::Right),
-        format!("R$ {:10.2}", data.change)
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(change_color),
-        format!("{:6.2}%", data.change_percentage)
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(change_color),
-        format!("R$ {:10.2}", data.average_price)
-            .cell()
-            .justify(Justify::Right),
-        format!("R$ {:10.2}", data.profit)
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(profit_color),
-        format!("{:6.2}%", data.profit_percentage)
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(profit_color),
-    ]
+fn format_summary_row(data: &SummaryData) -> String {
+    format!(
+        "{:<6}  {:>8}  R$ {:>10.2}  R$ {:>10.2}  {}R$ {:>10.2}\x1b[0m  {}{:>12.2}%\x1b[0m  R$ {:>10.2}  {}R$ {:>10.2}\x1b[0m  {}{:>10.2}%\x1b[0m",
+        data.name,
+        data.quantity,
+        data.current_price,
+        data.current_value,
+        get_color(data.change),
+        data.change,
+        get_color(data.change),
+        data.change_percentage,
+        data.average_price,
+        get_color(data.profit),
+        data.profit,
+        get_color(data.profit),
+        data.profit_percentage,
+    )
 }
 
-fn format_summary_totals(data: &[SummaryData]) -> Vec<CellStruct> {
+fn format_summary_totals(data: &[SummaryData]) -> String {
     let current_value: f64 = data.iter().map(|data| data.current_value).sum();
     let original_cost: f64 = data.iter().map(|data| data.original_cost).sum();
     let last_value: f64 = data.iter().map(|data| data.last_value).sum();
     let change: f64 = data.iter().map(|data| data.change).sum();
     let profit: f64 = data.iter().map(|data| data.profit).sum();
 
-    let change_color = get_color(change);
-    let profit_color = get_color(profit);
-
-    vec![
-        "Total".cell().justify(Justify::Left).bold(true),
-        "".cell(),
-        "".cell(),
-        format!("R$ {current_value:10.2}")
-            .cell()
-            .justify(Justify::Right)
-            .bold(true),
-        format!("R$ {change:10.2}")
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(change_color)
-            .bold(true),
-        format!("{:6.2}%", (change / last_value) * 100.0)
-            .cell()
-            .justify(Justify::Right)
-            .bold(true)
-            .foreground_color(change_color),
-        "".cell(),
-        format!("R$ {profit:10.2}")
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(profit_color)
-            .bold(true),
-        format!("{:6.2}%", (profit / original_cost) * 100.0)
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(profit_color)
-            .bold(true),
-    ]
+    format!(
+        "\x1b[1m{:<6}  {:>8}  {:>13}  R$ {:>10.2}\x1b[0m  {}R$ {:>10.2}\x1b[0m  {}{:>12.2}%\x1b[0m  {:>13}  {}R$ {:>10.2}\x1b[0m  {}{:>10.2}%\x1b[0m",
+        "Total",
+        "",
+        "",
+        current_value,
+        get_color(change),
+        change,
+        get_color(change),
+        (change / last_value) * 100.0,
+        "",
+        get_color(profit),
+        profit,
+        get_color(profit),
+        (profit / original_cost) * 100.0,
+    )
 }
 
-fn get_color(value: f64) -> Option<Color> {
+fn get_color(value: f64) -> &'static str {
     match value.partial_cmp(&0.0).unwrap() {
-        std::cmp::Ordering::Less => Some(Color::Red),
-        std::cmp::Ordering::Equal => None,
-        std::cmp::Ordering::Greater => Some(Color::Green),
+        std::cmp::Ordering::Less => "\x1b[31m",
+        std::cmp::Ordering::Equal => "\x1b[92m",
+        std::cmp::Ordering::Greater => "\x1b[92m",
     }
 }
 
-pub fn render_profit_by_month(data: Vec<ProfitSummaryData>) -> Result<()> {
-    let mut contents: Vec<Vec<CellStruct>> = data.iter().map(format_profit_summary_row).collect();
-    contents.push(format_profit_summary_totals(&data));
+pub fn render_profit_by_month(data: Vec<ProfitSummaryData>) {
+    let titles = format!(
+        "\x1b[1m{:<6}  {:^13}  {:^13}  {:^8}\x1b[0m",
+        "Month", "Sold Amount", "Profit", "Tax",
+    );
 
-    let table = contents
-        .table()
-        .title(vec![
-            "Month".cell().bold(true).justify(Justify::Left),
-            "Sold Amount".cell().bold(true).justify(Justify::Center),
-            "Profit".cell().bold(true).justify(Justify::Center),
-            "Tax".cell().bold(true).justify(Justify::Center),
-        ])
-        .separator(Separator::builder().build())
-        .border(Border::builder().build());
+    let contents: Vec<String> = data.iter().map(format_profit_summary_row).collect();
 
-    Ok(print_stdout(table)?)
+    println!("{}", titles);
+    contents.into_iter().for_each(|s| println!("{}", s));
+    println!("{}", format_profit_summary_totals(&data))
 }
 
-fn format_profit_summary_row(data: &ProfitSummaryData) -> Vec<CellStruct> {
-    let profit_color = get_color(data.profit);
-
-    vec![
-        (data.month + 1).cell().justify(Justify::Left),
-        format!("R$ {:10.2}", data.sold_amount)
-            .cell()
-            .justify(Justify::Right),
-        format!("R$ {:10.2}", data.profit)
-            .cell()
-            .justify(Justify::Right)
-            .foreground_color(profit_color),
-        format!("R$ {:10.2}", data.tax)
-            .cell()
-            .justify(Justify::Right),
-    ]
+fn format_profit_summary_row(data: &ProfitSummaryData) -> String {
+    format!(
+        "{:<6}  R$ {:>10.2}  {}{:>10.2}\x1b[0m  {:>10.2}",
+        (data.month + 1),
+        data.sold_amount,
+        get_color(data.profit),
+        data.profit,
+        data.tax,
+    )
 }
 
-fn format_profit_summary_totals(data: &[ProfitSummaryData]) -> Vec<CellStruct> {
+fn format_profit_summary_totals(data: &[ProfitSummaryData]) -> String {
     let profit_total: f64 = data.iter().map(|data| data.profit).sum();
     let sold_amount_total: f64 = data.iter().map(|data| data.sold_amount).sum();
     let tax_total: f64 = data.iter().map(|data| data.tax).sum();
 
-    let profit_color = get_color(profit_total);
-
-    vec![
-        "Total".cell().justify(Justify::Left).bold(true),
-        format!("R$ {sold_amount_total:10.2}")
-            .cell()
-            .justify(Justify::Right)
-            .bold(true),
-        format!("R$ {profit_total:10.2}")
-            .cell()
-            .justify(Justify::Right)
-            .bold(true)
-            .foreground_color(profit_color),
-        format!("R$ {tax_total:10.2}")
-            .cell()
-            .justify(Justify::Right)
-            .bold(true),
-    ]
+    format!(
+        "{:<6}  R$ {:>10.2}  {}{:>10.2}\x1b[0m  {:>10.2}",
+        "Total",
+        sold_amount_total,
+        get_color(profit_total),
+        profit_total,
+        tax_total,
+    )
 }
