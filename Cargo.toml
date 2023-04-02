@@ -9,4 +9,5 @@ anyhow = "1.0.66"
 serde = { version = "1.0.148", features = ["derive"] }
 serde_json = "1.0.89"
 time = { version = "0.3.20", features = ["serde-human-readable"] }
-ureq ={ version = "2.6.2", features = ["json"] }
+# We remove the default features to avoid pulling the `flat2` dependency which is not needed here.
+ureq ={ version = "2.6.2", features = ["json", "tls"], default-features = false }
