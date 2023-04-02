@@ -94,3 +94,9 @@ impl StockMarket {
         })
     }
 }
+
+impl Default for StockMarket {
+    fn default() -> Self {
+        Self::new()
+    }
+}
