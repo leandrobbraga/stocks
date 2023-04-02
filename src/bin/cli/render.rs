@@ -12,8 +12,8 @@ pub struct SummaryData {
     pub original_cost: f64,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ProfitSummaryData {
-    pub month: u8,
     pub profit: f64,
     pub sold_amount: f64,
     pub tax: f64,
@@ -94,23 +94,27 @@ fn get_color(value: f64) -> &'static str {
     }
 }
 
-pub fn render_profit_by_month(data: Vec<ProfitSummaryData>) {
+pub fn render_profit_by_month(data: [ProfitSummaryData; 12]) {
     let titles = format!(
         "\x1b[1m{:<6}  {:^13}  {:^13}  {:^8}\x1b[0m",
         "Month", "Sold Amount", "Profit", "Tax",
     );
 
-    let contents: Vec<String> = data.iter().map(format_profit_summary_row).collect();
+    let contents: Vec<String> = data
+        .iter()
+        .enumerate()
+        .map(|(i, data)| format_profit_summary_row(i as u32, data))
+        .collect();
 
     println!("{}", titles);
     contents.into_iter().for_each(|s| println!("{}", s));
     println!("{}", format_profit_summary_totals(&data))
 }
 
-fn format_profit_summary_row(data: &ProfitSummaryData) -> String {
+fn format_profit_summary_row(month: u32, data: &ProfitSummaryData) -> String {
     format!(
         "{:<6}  R$ {:>10.2}  {}{:>10.2}\x1b[0m  {:>10.2}",
-        (data.month + 1),
+        month,
         data.sold_amount,
         get_color(data.profit),
         data.profit,

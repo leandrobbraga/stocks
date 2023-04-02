@@ -1,6 +1,6 @@
-#[macro_use]
 mod log;
 mod render;
+
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use anyhow::{Context, Result};
 use stocks::portfolio::Portfolio;
@@ -104,26 +104,21 @@ fn main() -> Result<()> {
             render_summary(data)
         }
         Command::ProfitSummary { year } => {
-            let profit_by_month = portfolio.profit_by_month(year);
-
-            let mut data = Vec::with_capacity(12);
-
-            for (month, summary) in profit_by_month.iter().enumerate() {
+            let profit_by_month = portfolio.profit_by_month(year).map(|summary| {
                 let tax = if summary.sold_amount > 20000.0 && summary.profit > 0.0 {
                     summary.profit * 0.15
                 } else {
                     0.0
                 };
 
-                data.push(ProfitSummaryData {
-                    month: month as u8,
+                ProfitSummaryData {
                     sold_amount: summary.sold_amount,
                     profit: summary.profit,
                     tax,
-                })
-            }
+                }
+            });
 
-            render_profit_by_month(data)
+            render_profit_by_month(profit_by_month)
         }
         Command::Help => {
             usage(&program);
@@ -175,7 +170,7 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
         "profit-summary" => {
             let year = match args.next() {
                 Some(year) => year.parse::<i32>().context("Could not parse year")?,
-                None => OffsetDateTime::now_utc().year() as i32,
+                None => OffsetDateTime::now_utc().year(),
             };
 
             Ok(Command::ProfitSummary { year })
