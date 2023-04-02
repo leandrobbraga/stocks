@@ -65,12 +65,20 @@ impl StockMarket {
 
             for stock in stocks {
                 let handle = s.spawn(|| {
-                    StockMarket::get_stock_price(
-                        self.client.clone(),
-                        stock.symbol.as_str(),
-                        stock.quantity(date),
-                        stock.average_purchase_price(date),
-                    )
+                    let response = self
+                        .client
+                        .get(format!("{API_URL}/{}", stock.symbol).as_str())
+                        .call()?;
+
+                    let response: MFinanceResponse = response.into_json()?;
+
+                    Ok(PricedStock {
+                        symbol: response.symbol,
+                        quantity: stock.quantity(date),
+                        average_price: stock.average_purchase_price(date),
+                        price: response.last_price,
+                        last_price: response.closing_price,
+                    })
                 });
                 handles.push(handle);
             }
@@ -83,24 +91,6 @@ impl StockMarket {
                     })
                 })
                 .collect()
-        })
-    }
-
-    /// Fetches current information about a stock from the stock market.
-    fn get_stock_price(
-        client: Agent,
-        symbol: &str,
-        quantity: u32,
-        average_price: f64,
-    ) -> Result<PricedStock> {
-        let response = client.get(format!("{API_URL}/{symbol}").as_str()).call()?;
-        let response: MFinanceResponse = response.into_json()?;
-        Ok(PricedStock {
-            symbol: response.symbol,
-            quantity,
-            average_price,
-            price: response.last_price,
-            last_price: response.closing_price,
         })
     }
 }
