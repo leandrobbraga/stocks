@@ -1,10 +1,11 @@
-mod commands;
 #[macro_use]
 mod log;
 mod render;
+use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use anyhow::{Context, Result};
 use stocks::portfolio::Portfolio;
 use stocks::stock_market::StockMarket;
+use stocks::{portfolio::Stock, stock_market::PricedStock};
 use time::{format_description, Date, OffsetDateTime, PrimitiveDateTime, UtcOffset};
 
 enum Command {
@@ -60,13 +61,9 @@ fn main() -> Result<()> {
             price,
             datetime,
         } => {
-            commands::buy(
-                &mut portfolio,
-                &symbol.to_uppercase(),
-                quantity,
-                price,
-                datetime,
-            )?;
+            portfolio.buy(symbol.as_str(), quantity, price, datetime);
+            info!("You bought {quantity} {symbol} at R${price:10.2}.");
+            portfolio.save()?;
         }
         Command::Sell {
             symbol,
@@ -74,21 +71,59 @@ fn main() -> Result<()> {
             price,
             datetime,
         } => {
-            commands::sell(
-                &mut portfolio,
-                &symbol.to_uppercase(),
-                quantity,
-                price,
-                datetime,
-            )?;
+            let profit = portfolio.sell(symbol.as_str(), quantity, price, datetime)?;
+            info!("You sold {quantity} {symbol} profiting R${profit:10.2}.");
+            portfolio.save()?;
         }
         Command::Summary { date } => {
             let stock_market = StockMarket::new();
-            commands::summarize(&portfolio, &stock_market, date);
+
+            let date = date
+                .with_time(time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"))
+                .assume_offset(UtcOffset::UTC);
+
+            let stocks: Vec<&Stock> = portfolio
+                .stocks
+                .values()
+                // To ensure that we only show stocks that we own
+                .filter(|stock| stock.quantity(date) > 0)
+                .collect();
+
+            let priced_stocks = stock_market.get_stock_prices(&stocks, date);
+
+            let stock_count = priced_stocks.len();
+            let data: Vec<SummaryData> = priced_stocks
+                .into_iter()
+                .filter_map(|maybe_stock| maybe_stock.map(|stock| stock.into()).ok())
+                .collect();
+
+            if stock_count > data.len() {
+                warn!("Could not get prices for all stocks");
+            }
+
+            render_summary(data)
         }
         Command::ProfitSummary { year } => {
-            let year = u16::try_from(year)?;
-            commands::profit_summary(&portfolio, year);
+            let profit_by_month = portfolio.profit_by_month(year);
+
+            let mut data = Vec::with_capacity(12);
+
+            for (month, summary) in profit_by_month.iter().enumerate() {
+                let tax = if summary.sold_amount > 20000.0 && summary.profit > 0.0 {
+                    summary.profit * 0.15
+                } else {
+                    0.0
+                };
+
+                data.push(ProfitSummaryData {
+                    month: month as u8,
+                    sold_amount: summary.sold_amount,
+                    profit: summary.profit,
+                    tax,
+                })
+            }
+
+            render_profit_by_month(data)
         }
         Command::Help => {
             usage(&program);
@@ -179,4 +214,26 @@ fn parse_date(arg: Option<String>) -> Result<Date> {
         )?,
         None => OffsetDateTime::now_utc().date(),
     })
+}
+
+impl From<PricedStock> for SummaryData {
+    fn from(stock: PricedStock) -> Self {
+        let current_value = stock.price * stock.quantity as f64;
+        let last_value = stock.last_price * stock.quantity as f64;
+        let original_cost = stock.quantity as f64 * stock.average_price;
+
+        Self {
+            name: stock.symbol,
+            quantity: stock.quantity,
+            current_price: stock.price,
+            current_value,
+            change: current_value - last_value,
+            change_percentage: (current_value / last_value - 1.0) * 100.0,
+            average_price: stock.average_price,
+            profit: current_value - original_cost,
+            profit_percentage: (current_value / original_cost - 1.0) * 100.0,
+            last_value,
+            original_cost,
+        }
+    }
 }
