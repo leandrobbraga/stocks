@@ -101,7 +101,7 @@ fn main() -> Result<()> {
                 warn!("Could not get prices for all stocks");
             }
 
-            render_summary(data)
+            render_summary(data);
         }
         Command::ProfitSummary { year } => {
             let profit_by_month = portfolio.profit_by_month(year).map(|summary| {
@@ -118,7 +118,7 @@ fn main() -> Result<()> {
                 }
             });
 
-            render_profit_by_month(profit_by_month)
+            render_profit_by_month(&profit_by_month);
         }
         Command::Help => {
             usage(&program);
@@ -213,9 +213,9 @@ fn parse_date(arg: Option<String>) -> Result<Date> {
 
 impl From<PricedStock> for SummaryData {
     fn from(stock: PricedStock) -> Self {
-        let current_value = stock.price * stock.quantity as f64;
-        let last_value = stock.last_price * stock.quantity as f64;
-        let original_cost = stock.quantity as f64 * stock.average_price;
+        let current_value = stock.price * f64::from(stock.quantity);
+        let last_value = stock.last_price * f64::from(stock.quantity);
+        let original_cost = f64::from(stock.quantity) * stock.average_price;
 
         Self {
             name: stock.symbol,

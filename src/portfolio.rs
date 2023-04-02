@@ -63,7 +63,7 @@ impl Portfolio {
             .entry(symbol.to_string())
             .or_insert_with(|| Stock::new(symbol.to_string()));
 
-        stock.buy(quantity, price, datetime)
+        stock.buy(quantity, price, datetime);
     }
 
     pub fn sell(
@@ -135,9 +135,9 @@ impl Stock {
             }
 
             if trade.kind == TradeKind::Buy {
-                average_purchase_price = ((average_purchase_price * quantity as f64)
-                    + (trade.price * trade.quantity as f64))
-                    / (quantity + trade.quantity) as f64;
+                average_purchase_price = ((average_purchase_price * f64::from(quantity))
+                    + (trade.price * f64::from(trade.quantity)))
+                    / f64::from(quantity + trade.quantity);
                 quantity += trade.quantity;
             } else {
                 quantity -= trade.quantity;
@@ -160,7 +160,7 @@ impl Stock {
             kind: TradeKind::Buy,
         };
 
-        self.add_trade(trade)
+        self.add_trade(trade);
     }
 
     pub fn sell(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) -> Result<f64> {
@@ -186,7 +186,7 @@ impl Stock {
     fn calculate_profit(&self, trade: &Trade) -> f64 {
         let average_purchase_price = self.average_purchase_price(trade.datetime);
 
-        (trade.price - average_purchase_price) * trade.quantity as f64
+        (trade.price - average_purchase_price) * f64::from(trade.quantity)
     }
 
     pub fn get_profit_by_month(&self, year: i32) -> [MonthSummary; 12] {
@@ -203,7 +203,7 @@ impl Stock {
 
             let month = trade.datetime.month() as usize - 1;
 
-            profit_by_month[month].sold_amount += trade.price * trade.quantity as f64;
+            profit_by_month[month].sold_amount += trade.price * f64::from(trade.quantity);
             profit_by_month[month].profit += self.calculate_profit(trade);
         }
 

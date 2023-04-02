@@ -21,7 +21,7 @@ pub struct PricedStock {
     pub last_price: f64,
 }
 
-/// The complete response from the MFinance API.
+/// The complete response from the `MFinance` API.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]

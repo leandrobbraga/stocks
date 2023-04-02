@@ -37,9 +37,11 @@ pub fn render_summary(mut data: Vec<SummaryData>) {
 
     let contents: Vec<String> = data.iter().map(format_summary_row).collect();
 
-    println!("{}", titles);
-    contents.into_iter().for_each(|s| println!("{}", s));
-    println!("{}", format_summary_totals(&data))
+    println!("{titles}");
+    for content in contents {
+        println!("{content}");
+    }
+    println!("{}", format_summary_totals(&data));
 }
 
 fn format_summary_row(data: &SummaryData) -> String {
@@ -94,7 +96,7 @@ fn get_color(value: f64) -> &'static str {
     }
 }
 
-pub fn render_profit_by_month(data: [ProfitSummaryData; 12]) {
+pub fn render_profit_by_month(data: &[ProfitSummaryData; 12]) {
     let titles = format!(
         "\x1b[1m{:<6}  {:^13}  {:^13}  {:^8}\x1b[0m",
         "Month", "Sold Amount", "Profit", "Tax",
@@ -106,9 +108,11 @@ pub fn render_profit_by_month(data: [ProfitSummaryData; 12]) {
         .map(|(i, data)| format_profit_summary_row(i as u32, data))
         .collect();
 
-    println!("{}", titles);
-    contents.into_iter().for_each(|s| println!("{}", s));
-    println!("{}", format_profit_summary_totals(&data))
+    println!("{titles}");
+    for content in contents {
+        println!("{content}");
+    }
+    println!("{}", format_profit_summary_totals(data));
 }
 
 fn format_profit_summary_row(month: u32, data: &ProfitSummaryData) -> String {
