@@ -133,7 +133,10 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
 
     match command.as_str() {
         "buy" | "sell" => {
-            let symbol = args.next().context("No stock symbol provided")?;
+            let symbol = args
+                .next()
+                .context("No stock symbol provided")?
+                .to_uppercase();
 
             let quantity = args.next().context("No quantity provided")?;
 
