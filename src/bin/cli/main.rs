@@ -127,7 +127,16 @@ fn main() -> Result<()> {
         }
         Command::Split { stock, ratio } => {
             portfolio.split(stock.as_str(), ratio);
-            portfolio.save()?;
+            if ratio > 1.0 {
+                info!("You performed a {ratio:.2}:1 stock split for {stock}.");
+            } else {
+                let ratio = 1.0 / ratio;
+                info!("You performed a 1:{ratio:.2} stock split for {stock}.");
+            }
+            portfolio.save().map_err(|err| {
+                error!("Could not save portfolio: {err}");
+                err
+            })?;
         }
         Command::Help => {
             usage(&program);

@@ -82,3 +82,17 @@ cargo run -- profit--summary 2022
 > 12     R$       0.00 
 > Total  R$    3162.21 
 ```
+
+### Performing Stock Split
+
+In case of stock split events, it is possible to update the stock quantity and average purchase
+price to reflect the new quantity.
+
+```shell
+cargo run -- split BBAS3 2
+> [2022-12-03T22:48:09Z INFO  cli::app] You performed a 2:1 stock split for BBAS3.
+```
+
+NOTE: The current implementation will update all the trade history for the stock, losing the correct
+information about the original quantity / purchase price at a given time. Be careful when using this
+to report the correct information to the tax authorities.
