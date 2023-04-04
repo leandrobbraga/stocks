@@ -10,13 +10,13 @@ use time::{format_description, Date, OffsetDateTime, PrimitiveDateTime, UtcOffse
 
 enum Command {
     Buy {
-        symbol: String,
+        stock: String,
         quantity: u32,
         price: f64,
         datetime: OffsetDateTime,
     },
     Sell {
-        symbol: String,
+        stock: String,
         quantity: u32,
         price: f64,
         datetime: OffsetDateTime,
@@ -27,6 +27,11 @@ enum Command {
     ProfitSummary {
         year: i32,
     },
+    Split {
+        stock: String,
+        ratio: f64,
+    },
+
     Help,
 }
 
@@ -56,23 +61,23 @@ fn main() -> Result<()> {
 
     match command {
         Command::Buy {
-            symbol,
+            stock,
             quantity,
             price,
             datetime,
         } => {
-            portfolio.buy(symbol.as_str(), quantity, price, datetime);
-            info!("You bought {quantity} {symbol} at R${price:10.2}.");
+            portfolio.buy(stock.as_str(), quantity, price, datetime);
+            info!("You bought {quantity} {stock} at R${price:10.2}.");
             portfolio.save()?;
         }
         Command::Sell {
-            symbol,
+            stock,
             quantity,
             price,
             datetime,
         } => {
-            let profit = portfolio.sell(symbol.as_str(), quantity, price, datetime)?;
-            info!("You sold {quantity} {symbol} profiting R${profit:10.2}.");
+            let profit = portfolio.sell(stock.as_str(), quantity, price, datetime)?;
+            info!("You sold {quantity} {stock} profiting R${profit:10.2}.");
             portfolio.save()?;
         }
         Command::Summary { date } => {
@@ -120,6 +125,10 @@ fn main() -> Result<()> {
 
             render_profit_by_month(&profit_by_month);
         }
+        Command::Split { stock, ratio } => {
+            portfolio.split(stock.as_str(), ratio);
+            portfolio.save()?;
+        }
         Command::Help => {
             usage(&program);
         }
@@ -133,31 +142,29 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
 
     match command.as_str() {
         "buy" | "sell" => {
-            let symbol = args
+            let stock = args
                 .next()
                 .context("No stock symbol provided")?
                 .to_uppercase();
 
             let quantity = args.next().context("No quantity provided")?;
 
-            let quantity = quantity
-                .parse::<u32>()
-                .context("Could not parse quantity")?;
+            let quantity = quantity.parse().context("Could not parse quantity")?;
 
             let price = args.next().context("No price provided.")?;
-            let price = price.parse::<f64>().context("Could not parse price")?;
+            let price = price.parse().context("Could not parse price")?;
 
             let datetime = parse_datetime(args.next()).context("Could not parse datetime")?;
 
             return Ok(match command.as_str() {
                 "buy" => Command::Buy {
-                    symbol,
+                    stock,
                     quantity,
                     price,
                     datetime,
                 },
                 "sell" => Command::Sell {
-                    symbol,
+                    stock,
                     quantity,
                     price,
                     datetime,
@@ -172,11 +179,21 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
         }
         "profit-summary" => {
             let year = match args.next() {
-                Some(year) => year.parse::<i32>().context("Could not parse year")?,
+                Some(year) => year.parse().context("Could not parse year")?,
                 None => OffsetDateTime::now_utc().year(),
             };
 
             Ok(Command::ProfitSummary { year })
+        }
+        "split" => {
+            let stock = args
+                .next()
+                .context("No stock stock provided")?
+                .to_uppercase();
+
+            let ratio = args.next().context("No ratio provided")?.parse()?;
+
+            Ok(Command::Split { stock, ratio })
         }
         "-h" | "--help" => Ok(Command::Help),
         _ => anyhow::bail!("Unknown subcommand `{command}`"),
@@ -191,6 +208,7 @@ fn usage(program: &str) {
     eprintln!("  \x1b[4msell\x1b[0m <STOCK> <QUANTITY> <PRICE> [DATETIME]         remove the <STOCK> <QUANTITY> from the portfolio at a given <PRICE>, the default [DATETIME] is now");
     eprintln!("  \x1b[4msummary\x1b[0m [DATE]                                     show the state of the portfolio at a given [DATE], the default [DATE] is now");
     eprintln!("  \x1b[4mprofit-summary\x1b[0m [YEAR]                              show the month-by-month portfolio profit for a given [YEAR], the default [YEAR] is the current year");
+    eprintln!("  \x1b[4msplit\x1b[0m <STOCK> <RATIO>                              perform a stock split on a given <STOCK> increasing the number of stocks by the <RATIO>");
 }
 
 fn parse_datetime(arg: Option<String>) -> Result<OffsetDateTime> {

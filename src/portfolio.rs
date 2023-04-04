@@ -57,6 +57,15 @@ impl Portfolio {
         Ok(portfolio)
     }
 
+    pub fn split(&mut self, symbol: &str, ratio: f64) {
+        let stock = self
+            .stocks
+            .entry(symbol.to_string())
+            .or_insert_with(|| Stock::new(symbol.to_string()));
+
+        stock.split(ratio);
+    }
+
     pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: OffsetDateTime) {
         let stock = self
             .stocks
@@ -98,12 +107,20 @@ impl Portfolio {
 }
 
 impl Stock {
-    pub fn new(symbol: String) -> Self {
+    fn new(symbol: String) -> Self {
         Self {
             symbol,
             ..Default::default()
         }
     }
+
+    fn split(&mut self, ratio: f64) {
+        for trade in &mut self.trades {
+            trade.quantity = (f64::from(trade.quantity) * ratio) as u32;
+            trade.price /= ratio;
+        }
+    }
+
     /// Dynamically calculate the total quantity of the stock at a given date.
     pub fn quantity(&self, date: OffsetDateTime) -> u32 {
         let mut quantity = 0;
@@ -152,7 +169,7 @@ impl Stock {
         average_purchase_price
     }
 
-    pub fn buy(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) {
+    fn buy(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) {
         let trade = Trade {
             quantity,
             price,
@@ -163,7 +180,7 @@ impl Stock {
         self.add_trade(trade);
     }
 
-    pub fn sell(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) -> Result<f64> {
+    fn sell(&mut self, quantity: u32, price: f64, datetime: OffsetDateTime) -> Result<f64> {
         ensure!(
             quantity <= self.quantity(datetime),
             "Not enough shares to sell"
@@ -189,7 +206,7 @@ impl Stock {
         (trade.price - average_purchase_price) * f64::from(trade.quantity)
     }
 
-    pub fn get_profit_by_month(&self, year: i32) -> [MonthSummary; 12] {
+    fn get_profit_by_month(&self, year: i32) -> [MonthSummary; 12] {
         let mut profit_by_month = [MonthSummary::default(); 12];
 
         for trade in &self.trades {
