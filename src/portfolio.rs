@@ -24,6 +24,16 @@ pub struct Trade {
     #[serde(with = "time::serde::rfc3339")]
     pub datetime: OffsetDateTime,
     pub kind: TradeKind,
+    /// This is a list of splits that happened after the trade. It will allow us to calculate the
+    /// real quantity of the stock at a given date.
+    pub splits: Vec<Split>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Split {
+    pub ratio: f64,
+    #[serde(with = "time::serde::rfc3339")]
+    pub datetime: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
@@ -57,13 +67,13 @@ impl Portfolio {
         Ok(portfolio)
     }
 
-    pub fn split(&mut self, symbol: &str, ratio: f64) {
+    pub fn split(&mut self, symbol: &str, ratio: f64, datetime: OffsetDateTime) {
         let stock = self
             .stocks
             .entry(symbol.to_string())
             .or_insert_with(|| Stock::new(symbol.to_string()));
 
-        stock.split(ratio);
+        stock.split(ratio, datetime);
     }
 
     pub fn buy(&mut self, symbol: &str, quantity: u32, price: f64, datetime: OffsetDateTime) {
@@ -114,10 +124,13 @@ impl Stock {
         }
     }
 
-    fn split(&mut self, ratio: f64) {
+    fn split(&mut self, ratio: f64, datetime: OffsetDateTime) {
         for trade in &mut self.trades {
-            trade.quantity = (f64::from(trade.quantity) * ratio) as u32;
-            trade.price /= ratio;
+            if trade.datetime >= datetime {
+                break;
+            }
+
+            trade.splits.push(Split { ratio, datetime });
         }
     }
 
@@ -130,14 +143,22 @@ impl Stock {
                 break;
             }
 
-            if trade.kind == TradeKind::Buy {
-                quantity += trade.quantity;
+            let signal = if trade.kind == TradeKind::Buy {
+                1.0
             } else {
-                quantity -= trade.quantity;
-            }
+                -1.0
+            };
+
+            let split_ratio = trade
+                .splits
+                .iter()
+                .filter(|split| split.datetime < date)
+                .fold(1.0, |acc, split| acc * split.ratio);
+
+            quantity += (trade.quantity as f64 * signal * split_ratio) as i32;
         }
 
-        quantity
+        quantity as u32
     }
 
     /// Dynamically calculate the average purchase price of the stock at a given date.
@@ -151,13 +172,24 @@ impl Stock {
                 break;
             }
 
+            let split_ratio = trade
+                .splits
+                .iter()
+                // We only apply splits if it happened before the reference date for the
+                // quantity
+                .filter(|split| split.datetime < date)
+                .fold(1.0, |acc, split| acc * split.ratio);
+
+            let adjusted_trade_quantity = trade.quantity as f64 * split_ratio;
+            let adjusted_trade_price = trade.price / split_ratio;
+
             if trade.kind == TradeKind::Buy {
                 average_purchase_price = ((average_purchase_price * f64::from(quantity))
-                    + (trade.price * f64::from(trade.quantity)))
-                    / f64::from(quantity + trade.quantity);
-                quantity += trade.quantity;
+                    + (adjusted_trade_price * adjusted_trade_quantity))
+                    / (f64::from(quantity) + adjusted_trade_quantity);
+                quantity += adjusted_trade_quantity as u32;
             } else {
-                quantity -= trade.quantity;
+                quantity -= adjusted_trade_quantity as u32;
                 if quantity == 0 {
                     // When the total quantity is 0, we have sold all the shares, which mean we need
                     // to reset the average_purchase_price back to 0.
@@ -175,6 +207,7 @@ impl Stock {
             price,
             datetime,
             kind: TradeKind::Buy,
+            splits: vec![],
         };
 
         self.add_trade(trade);
@@ -191,6 +224,7 @@ impl Stock {
             price,
             datetime,
             kind: TradeKind::Sell,
+            splits: vec![],
         };
 
         let profit = self.calculate_profit(&trade);
