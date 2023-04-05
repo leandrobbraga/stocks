@@ -1,7 +1,6 @@
 use super::portfolio::Stock;
 use anyhow::Result;
 use serde::Deserialize;
-use serde::Serialize;
 use time::OffsetDateTime;
 use ureq::Agent;
 
@@ -12,7 +11,7 @@ pub struct StockMarket {
     client: Agent,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize)]
 pub struct PricedStock {
     pub symbol: String,
     pub quantity: u32,
@@ -24,7 +23,6 @@ pub struct PricedStock {
 /// The complete response from the `MFinance` API.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct MFinanceResponse {
     pub change: f64,
     pub closing_price: f64,
@@ -92,11 +90,5 @@ impl StockMarket {
                 })
                 .collect()
         })
-    }
-}
-
-impl Default for StockMarket {
-    fn default() -> Self {
-        Self::new()
     }
 }

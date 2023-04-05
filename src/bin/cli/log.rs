@@ -1,4 +1,3 @@
-#![allow(unused)]
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {

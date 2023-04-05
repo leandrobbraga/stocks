@@ -12,7 +12,6 @@ pub struct SummaryData {
     pub original_cost: f64,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
 pub struct ProfitSummaryData {
     pub profit: f64,
     pub sold_amount: f64,

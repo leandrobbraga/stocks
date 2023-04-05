@@ -6,12 +6,12 @@ use serde::Serialize;
 use std::collections::HashMap;
 use time::OffsetDateTime;
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Portfolio {
     pub stocks: HashMap<String, Stock>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Stock {
     pub symbol: String,
     pub trades: Vec<Trade>,
@@ -42,7 +42,7 @@ pub enum TradeKind {
     Sell,
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default)]
 pub struct MonthSummary {
     pub profit: f64,
     pub sold_amount: f64,
@@ -101,7 +101,7 @@ impl Portfolio {
     }
 
     pub fn profit_by_month(&self, year: i32) -> [MonthSummary; 12] {
-        let mut profit_by_month = [MonthSummary::default(); 12];
+        let mut profit_by_month: [MonthSummary; 12] = Default::default();
 
         for stock in self.stocks.values() {
             stock.update_profit_by_month(&mut profit_by_month, year);
@@ -115,7 +115,7 @@ impl Stock {
     fn new(symbol: String) -> Self {
         Self {
             symbol,
-            ..Default::default()
+            trades: vec![],
         }
     }
 
@@ -165,9 +165,9 @@ impl Stock {
                 average_purchase_price = ((average_purchase_price * f64::from(quantity))
                     + (trade.price(date) * trade.quantity(date) as f64))
                     / f64::from(quantity + trade.quantity(date));
-                quantity += trade.quantity(date) as u32;
+                quantity += trade.quantity(date);
             } else {
-                quantity -= trade.quantity(date) as u32;
+                quantity -= trade.quantity(date);
                 if quantity == 0 {
                     // When the total quantity is 0, we have sold all the shares, which mean we need
                     // to reset the average_purchase_price back to 0.
