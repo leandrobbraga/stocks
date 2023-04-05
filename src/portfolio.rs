@@ -104,12 +104,7 @@ impl Portfolio {
         let mut profit_by_month = [MonthSummary::default(); 12];
 
         for stock in self.stocks.values() {
-            let stock_profit_by_month = stock.get_profit_by_month(year);
-
-            for (month, summary) in stock_profit_by_month.into_iter().enumerate() {
-                profit_by_month[month].profit += summary.profit;
-                profit_by_month[month].sold_amount += summary.sold_amount;
-            }
+            stock.update_profit_by_month(&mut profit_by_month, year);
         }
 
         profit_by_month
@@ -223,9 +218,7 @@ impl Stock {
         (trade.price - average_purchase_price) * f64::from(trade.quantity)
     }
 
-    fn get_profit_by_month(&self, year: i32) -> [MonthSummary; 12] {
-        let mut profit_by_month = [MonthSummary::default(); 12];
-
+    fn update_profit_by_month(&self, profit_by_month: &mut [MonthSummary; 12], year: i32) {
         for trade in &self.trades {
             if trade.kind != TradeKind::Sell {
                 continue;
@@ -240,8 +233,6 @@ impl Stock {
             profit_by_month[month].sold_amount += trade.price * f64::from(trade.quantity);
             profit_by_month[month].profit += self.calculate_profit(trade);
         }
-
-        profit_by_month
     }
 
     fn add_trade(&mut self, trade: Trade) {
