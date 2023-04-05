@@ -149,13 +149,7 @@ impl Stock {
                 -1.0
             };
 
-            let split_ratio = trade
-                .splits
-                .iter()
-                .filter(|split| split.datetime < date)
-                .fold(1.0, |acc, split| acc * split.ratio);
-
-            quantity += (trade.quantity as f64 * signal * split_ratio) as i32;
+            quantity += (trade.quantity(date) as f64 * signal) as i32;
         }
 
         quantity as u32
@@ -172,24 +166,13 @@ impl Stock {
                 break;
             }
 
-            let split_ratio = trade
-                .splits
-                .iter()
-                // We only apply splits if it happened before the reference date for the
-                // quantity
-                .filter(|split| split.datetime < date)
-                .fold(1.0, |acc, split| acc * split.ratio);
-
-            let adjusted_trade_quantity = trade.quantity as f64 * split_ratio;
-            let adjusted_trade_price = trade.price / split_ratio;
-
             if trade.kind == TradeKind::Buy {
                 average_purchase_price = ((average_purchase_price * f64::from(quantity))
-                    + (adjusted_trade_price * adjusted_trade_quantity))
-                    / (f64::from(quantity) + adjusted_trade_quantity);
-                quantity += adjusted_trade_quantity as u32;
+                    + (trade.price(date) * trade.quantity(date) as f64))
+                    / f64::from(quantity + trade.quantity(date));
+                quantity += trade.quantity(date) as u32;
             } else {
-                quantity -= adjusted_trade_quantity as u32;
+                quantity -= trade.quantity(date) as u32;
                 if quantity == 0 {
                     // When the total quantity is 0, we have sold all the shares, which mean we need
                     // to reset the average_purchase_price back to 0.
@@ -267,5 +250,27 @@ impl Stock {
         // We ensure that the trades are sorted by date so that we can iterate over all the trades
         // in chronological order.
         self.trades.sort_by(|a, b| a.datetime.cmp(&b.datetime));
+    }
+}
+
+impl Trade {
+    fn quantity(&self, datetime: OffsetDateTime) -> u32 {
+        let split_ratio = self
+            .splits
+            .iter()
+            .filter(|split| split.datetime < datetime)
+            .fold(1.0, |acc, split| acc * split.ratio);
+
+        (self.quantity as f64 * split_ratio) as u32
+    }
+
+    fn price(&self, datetime: OffsetDateTime) -> f64 {
+        let split_ratio = self
+            .splits
+            .iter()
+            .filter(|split| split.datetime < datetime)
+            .fold(1.0, |acc, split| acc * split.ratio);
+
+        self.price / split_ratio
     }
 }
