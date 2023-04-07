@@ -4,8 +4,8 @@ mod render;
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use anyhow::{Context, Result};
 use stocks::portfolio::Portfolio;
+use stocks::stock_market::PricedStock;
 use stocks::stock_market::StockMarket;
-use stocks::{portfolio::Stock, stock_market::PricedStock};
 use time::{format_description, Date, OffsetDateTime, PrimitiveDateTime, UtcOffset};
 
 enum Command {
@@ -88,9 +88,9 @@ fn main() -> Result<()> {
                 .with_time(time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"))
                 .assume_offset(UtcOffset::UTC);
 
-            let stocks: Vec<&Stock> = portfolio
+            let stocks: Vec<_> = portfolio
                 .stocks
-                .values()
+                .into_values()
                 // To ensure that we only show stocks that we own
                 .filter(|stock| stock.quantity(date) > 0)
                 .collect();

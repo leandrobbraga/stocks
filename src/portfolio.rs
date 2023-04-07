@@ -24,8 +24,8 @@ pub struct Trade {
     #[serde(with = "time::serde::rfc3339")]
     pub datetime: OffsetDateTime,
     pub kind: TradeKind,
-    /// This is a list of splits that happened after the trade. It will allow us to calculate the
-    /// real quantity of the stock at a given date.
+    /// The list of splits allow us to adjust the stock quantity according to the reference date
+    /// (i.e. if the reference date is before or after the split date).
     pub splits: Vec<Split>,
 }
 

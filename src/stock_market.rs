@@ -52,10 +52,9 @@ impl StockMarket {
         }
     }
 
-    /// Given a slice of stocks, fetches current information about them from the stock market.
     pub fn get_stock_prices(
         &self,
-        stocks: &[&Stock],
+        stocks: &[Stock],
         date: OffsetDateTime,
     ) -> Vec<Result<PricedStock>> {
         std::thread::scope(|s| {
