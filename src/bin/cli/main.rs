@@ -25,6 +25,7 @@ enum Command {
     },
     Summary {
         date: Date,
+        watch: bool,
     },
     ProfitSummary {
         year: i32,
@@ -85,7 +86,7 @@ fn main() -> Result<()> {
             info!("You sold {quantity} {stock} profiting R${profit:10.2}.");
             portfolio.save()?;
         }
-        Command::Summary { date } => {
+        Command::Summary { date, watch } => {
             let stock_market = StockMarket::new();
 
             let date = date
@@ -99,19 +100,35 @@ fn main() -> Result<()> {
                 .filter(|stock| stock.quantity(date) > 0)
                 .collect();
 
-            let priced_stocks = stock_market.get_stock_prices(&stocks, date);
+            loop {
+                let priced_stocks = stock_market.get_stock_prices(&stocks, date);
 
-            let stock_count = priced_stocks.len();
-            let data: Vec<SummaryData> = priced_stocks
-                .into_iter()
-                .filter_map(|maybe_stock| maybe_stock.map(|stock| stock.into()).ok())
-                .collect();
+                let stock_count = priced_stocks.len();
+                let data: Vec<SummaryData> = priced_stocks
+                    .into_iter()
+                    .filter_map(|maybe_stock| maybe_stock.map(|stock| stock.into()).ok())
+                    .collect();
 
-            if stock_count > data.len() {
-                warn!("Could not get prices for all stocks");
+                if stock_count > data.len() {
+                    warn!("Could not get prices for all stocks");
+                }
+
+                // We opt to not clear the screen here, so we are able to see the changes
+                render_summary(data);
+                info!(
+                    "Summary updated at: {}",
+                    OffsetDateTime::now_utc().format(&format_description::parse(
+                        "[year]-[month]-[day] [hour]:[minute]:[second]"
+                    )?)?
+                );
+
+                if !watch {
+                    break;
+                }
+
+                // The API that we currently use updates roughly once every 20 minutes
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
-
-            render_summary(data);
         }
         Command::ProfitSummary { year } => {
             let profit_by_month = portfolio.profit_by_month(year).map(|summary| {
@@ -207,9 +224,26 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
             });
         }
         "summary" => {
-            let date = parse_date(args.next()).context("Could not parse date")?;
+            let date;
+            let watch;
+            match args.next() {
+                Some(s) => match s.as_str() {
+                    "-w" | "--watch" => {
+                        date = parse_date(None)?;
+                        watch = true;
+                    }
+                    _ => {
+                        date = parse_date(Some(s))?;
+                        watch = false;
+                    }
+                },
+                None => {
+                    date = parse_date(None)?;
+                    watch = false;
+                }
+            }
 
-            Ok(Command::Summary { date })
+            Ok(Command::Summary { date, watch })
         }
         "profit-summary" => {
             let year = match args.next() {
@@ -247,10 +281,10 @@ fn usage(program: &str) {
     eprintln!("\x1b[4;1mCOMMANDS\x1b[0m:");
     eprintln!("  \x1b[4mbuy\x1b[0m <STOCK> <QUANTITY> <PRICE> [DATETIME]          add the <STOCK> <QUANTITY> to the portfolio at a given <PRICE>, the default [DATETIME] is now");
     eprintln!("  \x1b[4msell\x1b[0m <STOCK> <QUANTITY> <PRICE> [DATETIME]         remove the <STOCK> <QUANTITY> from the portfolio at a given <PRICE>, the default [DATETIME] is now");
-    eprintln!("  \x1b[4msummary\x1b[0m [DATE]                                     show the state of the portfolio at a given [DATE], the default [DATE] is now");
+    eprintln!("  \x1b[4msummary\x1b[0m [DATE] [-w | --watch]                      show the state of the portfolio at a given [DATE], the default [DATE] is now");
     eprintln!("  \x1b[4mprofit-summary\x1b[0m [YEAR]                              show the month-by-month portfolio profit for a given [YEAR], the default [YEAR] is the current year");
-    eprintln!("  \x1b[4msplit\x1b[0m <STOCK> <RATIO> [DATE]                       perform a stock split on a given <STOCK> in a given [DATE] increasing the number of stocks by the <RATIO>");
-    eprintln!("  \x1b[4mdump\x1b[0m <FILEPATH>                                   dumps the trade history from all stocks to a given <FILEPATH>");
+    eprintln!("  \x1b[4msplit\x1b[0m <STOCK> <RATIO> [DATE]                       perform a stock split on a given <STOCK> in a given [DATE] increasing the number of stocks by <RATIO>");
+    eprintln!("  \x1b[4mdump\x1b[0m <FILEPATH>                                    dumps the trade history from all stocks to a given <FILEPATH>");
 }
 
 fn parse_datetime(arg: Option<String>) -> Result<OffsetDateTime> {

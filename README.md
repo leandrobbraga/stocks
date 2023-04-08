@@ -54,6 +54,16 @@ cargo run -- summary 2022-12-31
 NOTE: Be careful when using this command, as the `Current Price` will not be the reference date
 price, but the actual current price.
 
+#### Watch
+
+There is also a `-w` or `--watch` flag to monitor the portfolio .
+
+```shell
+cargo run -- summary -w
+```
+
+This will update the summary every 20 minutes (roughly the API update frequency).
+
 ### Selling stocks
 
 ```shell
