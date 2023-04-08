@@ -15,16 +15,16 @@ enum Command {
         stock: String,
         quantity: u32,
         price: f64,
-        datetime: OffsetDateTime,
+        datetime: Option<OffsetDateTime>,
     },
     Sell {
         stock: String,
         quantity: u32,
         price: f64,
-        datetime: OffsetDateTime,
+        datetime: Option<OffsetDateTime>,
     },
     Summary {
-        date: Date,
+        date: Option<Date>,
         watch: bool,
     },
     ProfitSummary {
@@ -33,7 +33,7 @@ enum Command {
     Split {
         stock: String,
         ratio: f64,
-        date: Date,
+        date: Option<Date>,
     },
     DumpTrades {
         path: PathBuf,
@@ -72,6 +72,8 @@ fn main() -> Result<()> {
             price,
             datetime,
         } => {
+            let datetime = datetime.unwrap_or_else(|| OffsetDateTime::now_utc());
+
             portfolio.buy(stock.as_str(), quantity, price, datetime);
             info!("You bought {quantity} {stock} at R${price:10.2}.");
             portfolio.save()?;
@@ -82,6 +84,8 @@ fn main() -> Result<()> {
             price,
             datetime,
         } => {
+            let datetime = datetime.unwrap_or_else(|| OffsetDateTime::now_utc());
+
             let profit = portfolio.sell(stock.as_str(), quantity, price, datetime)?;
             info!("You sold {quantity} {stock} profiting R${profit:10.2}.");
             portfolio.save()?;
@@ -89,19 +93,24 @@ fn main() -> Result<()> {
         Command::Summary { date, watch } => {
             let stock_market = StockMarket::new();
 
-            let date = date
-                .with_time(time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"))
-                .assume_offset(UtcOffset::UTC);
+            let datetime = date
+                .map(|date| {
+                    date.with_time(
+                        time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"),
+                    )
+                    .assume_offset(UtcOffset::UTC)
+                })
+                .unwrap_or_else(|| OffsetDateTime::now_utc());
 
             let stocks: Vec<_> = portfolio
                 .stocks
                 .into_values()
                 // To ensure that we only show stocks that we own
-                .filter(|stock| stock.quantity(date) > 0)
+                .filter(|stock| stock.quantity(datetime) > 0)
                 .collect();
 
             loop {
-                let priced_stocks = stock_market.get_stock_prices(&stocks, date);
+                let priced_stocks = stock_market.get_stock_prices(&stocks, datetime);
 
                 let stock_count = priced_stocks.len();
                 let data: Vec<SummaryData> = priced_stocks
@@ -149,8 +158,13 @@ fn main() -> Result<()> {
         }
         Command::Split { stock, ratio, date } => {
             let datetime = date
-                .with_time(time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"))
-                .assume_offset(UtcOffset::UTC);
+                .map(|date| {
+                    date.with_time(
+                        time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"),
+                    )
+                    .assume_offset(UtcOffset::UTC)
+                })
+                .unwrap_or_else(|| OffsetDateTime::now_utc());
 
             portfolio.split(stock.as_str(), ratio, datetime);
 
@@ -205,7 +219,10 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
             let price = args.next().context("No price provided.")?;
             let price = price.parse().context("Could not parse price")?;
 
-            let datetime = parse_datetime(args.next()).context("Could not parse datetime")?;
+            let datetime = args
+                .next()
+                .map(|arg| parse_datetime(arg.as_str()))
+                .transpose()?;
 
             return Ok(match command.as_str() {
                 "buy" => Command::Buy {
@@ -229,16 +246,16 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
             match args.next() {
                 Some(s) => match s.as_str() {
                     "-w" | "--watch" => {
-                        date = parse_date(None)?;
+                        date = None;
                         watch = true;
                     }
                     _ => {
-                        date = parse_date(Some(s))?;
+                        date = Some(parse_date(s.as_str())?);
                         watch = false;
                     }
                 },
                 None => {
-                    date = parse_date(None)?;
+                    date = None;
                     watch = false;
                 }
             }
@@ -261,7 +278,10 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
 
             let ratio = args.next().context("No ratio provided")?.parse()?;
 
-            let date = parse_date(args.next()).context("Could not parse date")?;
+            let date = args
+                .next()
+                .map(|arg| parse_date(arg.as_ref()))
+                .transpose()?;
 
             Ok(Command::Split { stock, ratio, date })
         }
@@ -287,25 +307,19 @@ fn usage(program: &str) {
     eprintln!("  \x1b[4mdump\x1b[0m <FILEPATH>                                    dumps the trade history from all stocks to a given <FILEPATH>");
 }
 
-fn parse_datetime(arg: Option<String>) -> Result<OffsetDateTime> {
-    Ok(match arg {
-        Some(date) => PrimitiveDateTime::parse(
-            date.as_str(),
-            &format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")?,
-        )?
-        .assume_offset(UtcOffset::UTC),
-        None => OffsetDateTime::now_utc(),
-    })
+fn parse_datetime(date: &str) -> Result<OffsetDateTime> {
+    Ok(PrimitiveDateTime::parse(
+        date,
+        &format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")?,
+    )?
+    .assume_offset(UtcOffset::UTC))
 }
 
-fn parse_date(arg: Option<String>) -> Result<Date> {
-    Ok(match arg {
-        Some(date) => Date::parse(
-            date.as_str(),
-            &format_description::parse("[year]-[month]-[day]")?,
-        )?,
-        None => OffsetDateTime::now_utc().date(),
-    })
+fn parse_date(date: &str) -> Result<Date> {
+    Ok(Date::parse(
+        date,
+        &format_description::parse("[year]-[month]-[day]")?,
+    )?)
 }
 
 impl From<PricedStock> for SummaryData {
