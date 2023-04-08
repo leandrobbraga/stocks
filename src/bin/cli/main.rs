@@ -250,6 +250,7 @@ fn usage(program: &str) {
     eprintln!("  \x1b[4msummary\x1b[0m [DATE]                                     show the state of the portfolio at a given [DATE], the default [DATE] is now");
     eprintln!("  \x1b[4mprofit-summary\x1b[0m [YEAR]                              show the month-by-month portfolio profit for a given [YEAR], the default [YEAR] is the current year");
     eprintln!("  \x1b[4msplit\x1b[0m <STOCK> <RATIO> [DATE]                       perform a stock split on a given <STOCK> in a given [DATE] increasing the number of stocks by the <RATIO>");
+    eprintln!("  \x1b[4mdump\x1b[0m <FILEPATH>                                   dumps the trade history from all stocks to a given <FILEPATH>");
 }
 
 fn parse_datetime(arg: Option<String>) -> Result<OffsetDateTime> {
