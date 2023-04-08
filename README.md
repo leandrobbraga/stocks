@@ -92,3 +92,19 @@ price to reflect the new quantity.
 cargo run -- split BBAS3 2
 > [2022-12-03T22:48:09Z INFO  cli::app] You performed a 2:1 stock split for BBAS3.
 ```
+
+### Dumping all trades to a CSV file
+
+This commands dumps all the trades to a `.csv` file to be manipulated in other applications (e.g.
+Google Sheets or Excel).
+
+```shell
+cargo run -- dump history.csv
+```
+
+This same `.csv` file format can be utilized to import trades to the `Stocks` portfolio.
+
+```shell
+python load_history.py history.csv
+> INFO: Trades dumped to "history.csv".
+```

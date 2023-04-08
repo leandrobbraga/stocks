@@ -1,6 +1,8 @@
 mod log;
 mod render;
 
+use std::path::PathBuf;
+
 use crate::render::{render_profit_by_month, render_summary, ProfitSummaryData, SummaryData};
 use anyhow::{Context, Result};
 use stocks::portfolio::Portfolio;
@@ -32,7 +34,9 @@ enum Command {
         ratio: f64,
         date: Date,
     },
-
+    DumpTrades {
+        path: PathBuf,
+    },
     Help,
 }
 
@@ -144,6 +148,21 @@ fn main() -> Result<()> {
                 err
             })?;
         }
+        Command::DumpTrades { path } => {
+            let file = std::fs::File::create(&path).map_err(|err| {
+                error!("Could not create file {path:?}: {err}");
+                err
+            })?;
+
+            let mut file = std::io::BufWriter::new(file);
+
+            portfolio.dump_trades(&mut file).map_err(|err| {
+                error!("Could not dump trades: {err}");
+                err
+            })?;
+
+            info!("Trades dumped to {path:?}.");
+        }
         Command::Help => {
             usage(&program);
         }
@@ -211,6 +230,11 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
             let date = parse_date(args.next()).context("Could not parse date")?;
 
             Ok(Command::Split { stock, ratio, date })
+        }
+        "dump" => {
+            let path = PathBuf::from(args.next().context("No path provided")?);
+
+            Ok(Command::DumpTrades { path })
         }
         "-h" | "--help" => Ok(Command::Help),
         _ => anyhow::bail!("Unknown subcommand `{command}`"),

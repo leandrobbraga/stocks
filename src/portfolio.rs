@@ -4,6 +4,8 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fmt::Display;
+use time::format_description;
 use time::OffsetDateTime;
 
 #[derive(Serialize, Deserialize)]
@@ -65,6 +67,28 @@ impl Portfolio {
         let file = std::fs::File::open("portfolio.json")?;
         let portfolio = serde_json::from_reader(file)?;
         Ok(portfolio)
+    }
+
+    pub fn dump_trades(&self, file: &mut impl std::io::Write) -> Result<()> {
+        writeln!(file, "symbol;date;kind;quantity;price")?;
+
+        let format_description = format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")?;
+
+        for stock in self.stocks.values() {
+            for trade in &stock.trades {
+                writeln!(
+                    file,
+                    "{};{};{};{};{}",
+                    stock.symbol,
+                    trade.datetime.format(&format_description)?,
+                    trade.kind,
+                    trade.quantity,
+                    trade.price
+                )?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn split(&mut self, symbol: &str, ratio: f64, datetime: OffsetDateTime) {
@@ -263,5 +287,18 @@ impl Trade {
             .fold(1.0, |acc, split| acc * split.ratio);
 
         self.price / split_ratio
+    }
+}
+
+impl Display for TradeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                TradeKind::Buy => "buy",
+                TradeKind::Sell => "sell",
+            }
+        )
     }
 }
