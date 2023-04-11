@@ -8,6 +8,6 @@ edition = "2021"
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-time = { version = "0.3.20", features = ["serde-human-readable"] }
+time = { version = "0.3.20", features = ["serde-human-readable", "local-offset"] }
 # We remove the default features to avoid pulling the `flat2` dependency which is not needed here.
 ureq ={ version = "2", features = ["json", "tls"], default-features = false }

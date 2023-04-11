@@ -72,7 +72,9 @@ fn main() -> Result<()> {
             price,
             datetime,
         } => {
-            let datetime = datetime.unwrap_or_else(|| OffsetDateTime::now_utc());
+            let datetime = datetime.unwrap_or_else(|| {
+                OffsetDateTime::now_local().expect("BUG: Could not get the local time.")
+            });
 
             portfolio.buy(stock.as_str(), quantity, price, datetime);
             info!("You bought {quantity} {stock} at R${price:10.2}.");
@@ -84,7 +86,9 @@ fn main() -> Result<()> {
             price,
             datetime,
         } => {
-            let datetime = datetime.unwrap_or_else(|| OffsetDateTime::now_utc());
+            let datetime = datetime.unwrap_or_else(|| {
+                OffsetDateTime::now_local().expect("BUG: Could not get the local time.")
+            });
 
             let profit = portfolio.sell(stock.as_str(), quantity, price, datetime)?;
             info!("You sold {quantity} {stock} profiting R${profit:10.2}.");
@@ -98,9 +102,14 @@ fn main() -> Result<()> {
                     date.with_time(
                         time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"),
                     )
-                    .assume_offset(UtcOffset::UTC)
+                    .assume_offset(
+                        UtcOffset::current_local_offset()
+                            .expect("BUG: Could not get the local offset."),
+                    )
                 })
-                .unwrap_or_else(|| OffsetDateTime::now_utc());
+                .unwrap_or_else(|| {
+                    OffsetDateTime::now_local().expect("BUG: Could not get the local time.")
+                });
 
             let stocks: Vec<_> = portfolio
                 .stocks
@@ -126,7 +135,7 @@ fn main() -> Result<()> {
                 render_summary(data);
                 info!(
                     "Summary updated at: {}",
-                    OffsetDateTime::now_utc().format(&format_description::parse(
+                    OffsetDateTime::now_local()?.format(&format_description::parse(
                         "[year]-[month]-[day] [hour]:[minute]:[second]"
                     )?)?
                 );
@@ -162,9 +171,14 @@ fn main() -> Result<()> {
                     date.with_time(
                         time::Time::from_hms(23, 59, 59).expect("BUG: Should be a valid time"),
                     )
-                    .assume_offset(UtcOffset::UTC)
+                    .assume_offset(
+                        UtcOffset::current_local_offset()
+                            .expect("BUG: Could not get the local offset."),
+                    )
                 })
-                .unwrap_or_else(|| OffsetDateTime::now_utc());
+                .unwrap_or_else(|| {
+                    OffsetDateTime::now_local().expect("BUG: Could not get the local time.")
+                });
 
             portfolio.split(stock.as_str(), ratio, datetime);
 
@@ -265,7 +279,7 @@ fn parse_command(mut args: impl Iterator<Item = String>) -> Result<Command> {
         "profit-summary" => {
             let year = match args.next() {
                 Some(year) => year.parse().context("Could not parse year")?,
-                None => OffsetDateTime::now_utc().year(),
+                None => OffsetDateTime::now_local()?.year(),
             };
 
             Ok(Command::ProfitSummary { year })
